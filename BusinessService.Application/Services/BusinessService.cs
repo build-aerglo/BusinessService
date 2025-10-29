@@ -94,7 +94,6 @@ public class BusinessService : IBusinessService
         business.Name = dto.Name;
         business.Website = dto.Website;
         business.UpdatedAt = DateTime.UtcNow;
-        // business.Categories = dto.CategoryIds;
         
         // update in memory business
         if (dto.CategoryIds is not null)
