@@ -85,6 +85,28 @@ public class BusinessService : IBusinessService
         if (business.ParentBusinessId.HasValue)
             await RecalculateParentRatingAsync(business.ParentBusinessId.Value);
     }
+    
+    public async Task UpdateBusinessDetailsAsync(Guid id, UpdateBusinessDto dto)
+    {
+        var business = await _repository.FindByIdAsync(id)
+                       ?? throw new BusinessNotFoundException($"Business {id} not found.");
+
+        business.Name = dto.Name;
+        business.Website = dto.Website;
+        business.UpdatedAt = DateTime.UtcNow;
+        // business.Categories = dto.CategoryIds;
+        
+        // update in memory business
+        if (dto.CategoryIds is not null)
+        {
+            // parse string ids to Guid
+            var catGuids = dto.CategoryIds.Select(s => Guid.Parse(s)).ToList();
+            var categories = await _categoryRepository.FindAllByIdsAsync(catGuids);
+            business.Categories = categories.ToList();
+        }
+
+        await _repository.UpdateBusinessDetailsAsync(business, dto.CategoryIds);
+    }
 
     private async Task RecalculateParentRatingAsync(Guid parentId)
     {
