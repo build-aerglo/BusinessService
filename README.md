@@ -1,5 +1,7 @@
 # 🏢 BusinessService
 
+dotnet run --project BusinessService.Api
+
 A modular **.NET 9 (C#)** microservice built using **Domain-Driven Design (DDD)** principles and **Dapper** for lightweight data access.  
 The service manages **Businesses**, **Categories**, and their many-to-many relationships.
 
@@ -8,6 +10,7 @@ The service manages **Businesses**, **Categories**, and their many-to-many relat
 ## 📚 Overview
 
 The `BusinessService` system allows you to:
+
 - Manage **categories** and subcategories (self-referencing hierarchy)
 - Register **businesses** and their parent branches
 - Associate businesses with one or more categories
@@ -26,38 +29,45 @@ BusinessService/
 ├── Application.Tests/ → NUnit tests for business logic
 └── Infrastructure.Tests/ → NUnit integration tests (Dapper + Postgres)
 
-
-
 ---
 
 ## 🏗️ Architecture Layout
 
 ### 🧩 Domain Layer
+
 Contains **core business entities** and **rules**:
+
 - `Business`
 - `Category`
 - Domain Exceptions (e.g., `BusinessAlreadyExistsException`, `CategoryNotFoundException`)
 
 ### ⚙️ Application Layer
+
 Contains **use case logic** and **DTOs**:
+
 - Services: `BusinessService`, `CategoryService`
 - DTOs: `BusinessDto`, `CategoryDto`, `CreateBusinessRequest`, `CreateCategoryRequest`
 - Interfaces: `IBusinessService`, `ICategoryService`
 
 ### 🧱 Infrastructure Layer
+
 Handles **persistence** using **Dapper** and **PostgreSQL**:
+
 - `DapperContext` for DB connections
 - `BusinessRepository`, `CategoryRepository`
 - Implements repository interfaces defined in Domain layer
 
 ### 🌐 API Layer
+
 Contains **Controllers** and API routes:
+
 - `/api/business`
 - `/api/category`
 - Uses standard controllers (not minimal APIs)
 - Configured with **Swagger / OpenAPI**
 
 ### 🧪 Tests
+
 All layers are unit/integration tested using **NUnit** + **Moq** + **FluentAssertions**.  
 Infrastructure tests use **Testcontainers** to spin up real Postgres for end-to-end validation.
 
@@ -65,14 +75,14 @@ Infrastructure tests use **Testcontainers** to spin up real Postgres for end-to-
 
 ## 🧰 Tech Stack
 
-| Component | Technology |
-|------------|-------------|
-| Framework | .NET 9 (C# 13) |
-| Data Access | Dapper |
-| Database | PostgreSQL |
-| Architecture | Domain-Driven Design (DDD) |
-| Testing | NUnit, Moq, FluentAssertions, Testcontainers |
-| API Docs | Swagger / OpenAPI |
+| Component    | Technology                                   |
+| ------------ | -------------------------------------------- |
+| Framework    | .NET 9 (C# 13)                               |
+| Data Access  | Dapper                                       |
+| Database     | PostgreSQL                                   |
+| Architecture | Domain-Driven Design (DDD)                   |
+| Testing      | NUnit, Moq, FluentAssertions, Testcontainers |
+| API Docs     | Swagger / OpenAPI                            |
 
 ---
 
@@ -146,3 +156,4 @@ INSERT INTO business_category (business_id, category_id) VALUES
 ('0199d4ef-ca22-7970-a8d2-57945c1f4673', '0199d4ef-ca22-7970-a8d2-57977439b317'), -- Shoprite: Tourism
 ('0199d4ef-ca22-7970-a8d2-579a4e225266', '0199d4ef-ca22-7970-a8d2-579518a5030d'), -- Paga: Finance
 ('0199d4ef-ca22-7970-a8d2-579b94abdc68', '0199d4ef-ca22-7970-a8d2-57977439b317'); -- KFC: Tourism
+```

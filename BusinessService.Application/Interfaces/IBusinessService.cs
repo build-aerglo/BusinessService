@@ -7,4 +7,5 @@ public interface IBusinessService
     Task<BusinessDto> CreateBusinessAsync(CreateBusinessRequest request);
     Task<BusinessDto> GetBusinessAsync(Guid id);
     Task UpdateRatingsAsync(Guid businessId, decimal newAverage, long newCount);
+    Task UpdateBusinessDetailsAsync(Guid id, UpdateBusinessDto dto);
 }

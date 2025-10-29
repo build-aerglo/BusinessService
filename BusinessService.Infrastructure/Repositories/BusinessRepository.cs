@@ -71,6 +71,44 @@ public class BusinessRepository : IBusinessRepository
         return business;
     }
 
+	public async Task UpdateBusinessDetailsAsync(Business business, List<string>? categoryIds)
+    {
+        const string sql = """
+            UPDATE business
+            SET name = @Name,
+                website = @Website,
+                updated_at = @UpdatedAt
+            WHERE id = @Id;
+        """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, business);
+        
+        if (categoryIds is not null && categoryIds.Any())
+        {
+            // Clear existing category mappings
+            const string deleteSql = """
+                                         DELETE FROM business_category
+                                         WHERE business_id = @BusinessId;
+                                     """;
+            await conn.ExecuteAsync(deleteSql, new { BusinessId = business.Id });
+
+            // Reinsert new mappings
+            const string insertSql = """
+                                         INSERT INTO business_category (business_id, category_id)
+                                         VALUES (@BusinessId, @CategoryId)
+                                         ON CONFLICT DO NOTHING;
+                                     """;
+
+            var joinRows = categoryIds.Select(id => new
+            {
+                BusinessId = business.Id,
+                CategoryId = Guid.Parse(id)
+            });
+
+            await conn.ExecuteAsync(insertSql, joinRows);
+        }
+    }
+
     public async Task UpdateAsync(Business business)
     {
         const string sql = """
