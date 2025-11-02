@@ -36,22 +36,22 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader());
 });
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
 // ---------------------------------------------------------------------
 // 2️⃣  Configure the HTTP request pipeline
 // ---------------------------------------------------------------------
 
-if (app.Environment.IsDevelopment())
+// 1️⃣ Swagger setup
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    // Enable Swagger UI
-    app.MapOpenApi(); // new .NET 9 style
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "Business Service API v1");
-        options.RoutePrefix = string.Empty; // Swagger at root URL
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "User Service API v1");
+    options.RoutePrefix = ""; // load Swagger at root
+});
 
 // Optional: Global exception handler middleware (recommended)
 // app.UseMiddleware<ExceptionHandlingMiddleware>();
