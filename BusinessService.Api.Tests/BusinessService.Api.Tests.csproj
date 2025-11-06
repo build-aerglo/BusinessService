@@ -26,7 +26,6 @@
     <ItemGroup>
       <ProjectReference Include="..\BusinessService.Api\BusinessService.Api.csproj" />
       <ProjectReference Include="..\BusinessService.Application\BusinessService.Application.csproj" />
-      <ProjectReference Include="..\BusinessService.Domain\BusinessService.Domain.csproj" />
     </ItemGroup>
 
 </Project>

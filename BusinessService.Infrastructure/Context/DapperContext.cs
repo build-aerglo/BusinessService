@@ -12,7 +12,7 @@ public class DapperContext
     public DapperContext(IConfiguration configuration)
     {
         _configuration = configuration;
-        _connectionString = _configuration.GetConnectionString("DefaultConnection")!;
+        _connectionString = _configuration.GetConnectionString("PostgresConnection")!;
     }
 
     public virtual IDbConnection CreateConnection() => new NpgsqlConnection(_connectionString);
