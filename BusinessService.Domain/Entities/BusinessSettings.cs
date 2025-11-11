@@ -49,11 +49,11 @@ public class BusinessSettings
     /// </summary>
     public bool CheckAndUpdateDndModeExpiry()
     {
-        if (DndModeEnabled && DndModeExpiresAt.HasValue && DateTime.UtcNow >= DndModeExpiresAt.Value)
-        {
-            DisableDndMode();
-            return true;
-        }
-        return false;
+        if (!DndModeEnabled || !DndModeExpiresAt.HasValue || DateTime.UtcNow < DndModeExpiresAt.Value)
+            return false;
+
+        DisableDndMode();
+        return true;
     }
+
 }

@@ -37,7 +37,7 @@ public class BusinessSettingsService : IBusinessSettingsService
 
     public async Task<BusinessSettingsDto> GetBusinessSettingsAsync(Guid businessId)
     {
-        var business = await _businessRepository.FindByIdAsync(businessId)
+        _ = await _businessRepository.FindByIdAsync(businessId)
             ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
 
         var settings = await _settingsRepository.FindBusinessSettingsByBusinessIdAsync(businessId);
@@ -62,17 +62,14 @@ public class BusinessSettingsService : IBusinessSettingsService
         UpdateBusinessSettingsRequest request,
         Guid currentUserId)
     {
-        var business = await _businessRepository.FindByIdAsync(businessId)
+        _ = await _businessRepository.FindByIdAsync(businessId)
             ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
 
         // Authorization: Only parent rep of parent business can modify
         await EnsureUserIsParentRepAsync(businessId, currentUserId);
 
-        var settings = await _settingsRepository.FindBusinessSettingsByBusinessIdAsync(businessId);
-        if (settings == null)
-        {
-            settings = await CreateDefaultBusinessSettingsAsync(businessId);
-        }
+        var settings = await _settingsRepository.FindBusinessSettingsByBusinessIdAsync(businessId)
+                       ?? await CreateDefaultBusinessSettingsAsync(businessId);
 
         // Update only provided fields
         if (request.ReviewsPrivate.HasValue)
@@ -85,7 +82,8 @@ public class BusinessSettingsService : IBusinessSettingsService
             if (request.DndModeEnabled.Value)
             {
                 var hours = request.DndModeDurationHours ?? 60;
-                if (hours < 1 || hours > 60)
+                if (hours is < 1 or > 60)
+
                     throw new ArgumentException("DnD mode duration must be between 1 and 60 hours.");
                 settings.EnableDndMode(hours);
             }
@@ -108,7 +106,7 @@ public class BusinessSettingsService : IBusinessSettingsService
         int additionalHours,
         Guid currentUserId)
     {
-        if (additionalHours <= 0 || additionalHours > 168)
+        if (additionalHours is <= 0 or > 168)
             throw new ArgumentException("Additional hours must be between 1 and 168.");
 
         var settings = await _settingsRepository.FindBusinessSettingsByBusinessIdAsync(businessId)
@@ -153,15 +151,11 @@ public class BusinessSettingsService : IBusinessSettingsService
 
     public async Task<BusinessRepSettingsDto> GetRepSettingsAsync(Guid businessRepId)
     {
-        var businessRep = await _businessRepClient.GetBusinessRepByIdAsync(businessRepId)
+        _ = await _businessRepClient.GetBusinessRepByIdAsync(businessRepId)
             ?? throw new BusinessNotFoundException($"Business rep {businessRepId} not found.");
 
-        var settings = await _settingsRepository.FindRepSettingsByRepIdAsync(businessRepId);
-
-        if (settings == null)
-        {
-            settings = await CreateDefaultRepSettingsAsync(businessRepId);
-        }
+        var settings = await _settingsRepository.FindRepSettingsByRepIdAsync(businessRepId)
+                       ?? await CreateDefaultRepSettingsAsync(businessRepId);
 
         return MapToRepSettingsDto(settings);
     }
@@ -178,11 +172,9 @@ public class BusinessSettingsService : IBusinessSettingsService
         if (businessRep.UserId != currentUserId)
             throw new UnauthorizedSettingsAccessException("You can only modify your own settings.");
 
-        var settings = await _settingsRepository.FindRepSettingsByRepIdAsync(businessRepId);
-        if (settings == null)
-        {
-            settings = await CreateDefaultRepSettingsAsync(businessRepId);
-        }
+        var settings = await _settingsRepository.FindRepSettingsByRepIdAsync(businessRepId)
+                       ?? await CreateDefaultRepSettingsAsync(businessRepId);
+
 
         // Update only provided fields
         if (request.NotificationPreferences != null)
