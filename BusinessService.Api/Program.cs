@@ -1,8 +1,11 @@
+using BusinessService.Api.BackgroundServices;
 using BusinessService.Application.Interfaces;
 using BusinessService.Application.Services;
 using BusinessService.Domain.Repositories;
+using BusinessService.Infrastructure.Clients;
 using BusinessService.Infrastructure.Context;
 using BusinessService.Infrastructure.Repositories;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,11 +25,38 @@ builder.Services.AddSingleton<DapperContext>();
 // Register repositories (infrastructure layer)
 builder.Services.AddScoped<IBusinessRepository, BusinessRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IBusinessSettingsRepository, BusinessSettingsRepository>();
 
 // Register application services (application layer)
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IBusinessSettingsService, BusinessSettingsService>();
 
+
+// HTTP Client for UserService
+builder.Services.AddHttpClient<IBusinessRepServiceClient, BusinessRepServiceClient>(client =>
+{
+    var userServiceUrl = builder.Configuration["Services:UserServiceUrl"];
+    if (string.IsNullOrWhiteSpace(userServiceUrl))
+        throw new InvalidOperationException("Missing configuration: UserServiceUrl");
+
+    client.BaseAddress = new Uri(userServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
+{
+    var userServiceUrl = builder.Configuration["Services:UserServiceUrl"];
+    if (string.IsNullOrWhiteSpace(userServiceUrl))
+        throw new InvalidOperationException("Missing configuration: UserServiceUrl");
+    client.BaseAddress = new Uri(userServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    
+});
+
+builder.Services.AddHostedService<DndModeExpiryBackgroundService>();
 // Optional: CORS (if calling from frontend)
 builder.Services.AddCors(options =>
 {
