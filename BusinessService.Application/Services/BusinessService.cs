@@ -68,7 +68,26 @@ public class BusinessService : IBusinessService
             business.AvgRating,
             business.ReviewCount,
             business.ParentBusinessId,
-            business.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList()
+            business.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
+            business.BusinessAddress,
+            business.Logo,
+            business.OpeningHours,
+            business.BusinessEmail,
+            business.BusinessPhoneNumber,
+            business.CacNumber,
+            business.AccessUsername,
+            business.AccessNumber,
+            business.SocialMediaLinks,
+            business.BusinessDescription,
+            business.Media,
+            business.IsVerified,
+            business.ReviewLink,
+            business.PreferredContactMethod,
+            business.Highlights,
+            business.Tags,
+            business.AverageResponseTime,
+            business.ProfileClicks,
+            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList()
         );
     }
 
