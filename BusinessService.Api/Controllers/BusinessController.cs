@@ -76,4 +76,22 @@ public class BusinessController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Updates a business's profile.
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateBusiness(Guid id, [FromBody] UpdateBusinessRequest request)
+    {
+        try
+        {
+            var result = await _service.UpdateBusinessAsync(id, request);
+            return Ok(result);
+        }
+        catch (BusinessNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Business not found during update: {Message}", ex.Message);
+            return NotFound(new { error = ex.Message });
+        }
+    }
 }

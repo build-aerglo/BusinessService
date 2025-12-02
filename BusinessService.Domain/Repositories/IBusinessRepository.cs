@@ -8,5 +8,6 @@ public interface IBusinessRepository
     Task<Business?> FindByIdAsync(Guid id);
     Task AddAsync(Business business);
     Task UpdateAsync(Business business);
+    Task UpdateProfileAsync(Business business);
     Task<List<Business>> GetBranchesAsync(Guid parentId);
 }

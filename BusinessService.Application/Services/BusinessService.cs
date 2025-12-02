@@ -103,5 +103,61 @@ public class BusinessService : IBusinessService
 
         await _repository.UpdateAsync(parent);
     }
+
+    public async Task<BusinessDto> UpdateBusinessAsync(Guid id, UpdateBusinessRequest request)
+    {
+        var business = await _repository.FindByIdAsync(id)
+            ?? throw new BusinessNotFoundException($"Business {id} not found.");
+
+        business.Name = request.Name ?? business.Name;
+        business.Website = request.Website ?? business.Website;
+        business.BusinessAddress = request.BusinessAddress ?? business.BusinessAddress;
+        business.Logo = request.Logo ?? business.Logo;
+        business.OpeningHours = request.OpeningHours ?? business.OpeningHours;
+        business.BusinessEmail = request.BusinessEmail ?? business.BusinessEmail;
+        business.BusinessPhoneNumber = request.BusinessPhoneNumber ?? business.BusinessPhoneNumber;
+        business.CacNumber = request.CacNumber ?? business.CacNumber;
+        business.AccessUsername = request.AccessUsername ?? business.AccessUsername;
+        business.AccessNumber = request.AccessNumber ?? business.AccessNumber;
+        business.SocialMediaLinks = request.SocialMediaLinks ?? business.SocialMediaLinks;
+        business.BusinessDescription = request.BusinessDescription ?? business.BusinessDescription;
+        business.Sector = request.Sector ?? business.Sector;
+        business.Media = request.Media ?? business.Media;
+        if (request.IsVerified.HasValue)
+        {
+            business.IsVerified = request.IsVerified.Value;
+        }
+        business.ReviewLink = request.ReviewLink ?? business.ReviewLink;
+        business.PreferredContactMethod = request.PreferredContactMethod ?? business.PreferredContactMethod;
+        business.UpdatedAt = DateTime.UtcNow;
+
+        await _repository.UpdateProfileAsync(business);
+
+        return new BusinessDto(
+            business.Id,
+            business.Name,
+            business.Website,
+            business.IsBranch,
+            business.AvgRating,
+            business.ReviewCount,
+            business.ParentBusinessId,
+            business.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
+            business.BusinessAddress,
+            business.Logo,
+            business.OpeningHours,
+            business.BusinessEmail,
+            business.BusinessPhoneNumber,
+            business.CacNumber,
+            business.AccessUsername,
+            business.AccessNumber,
+            business.SocialMediaLinks,
+            business.BusinessDescription,
+            business.Sector,
+            business.Media,
+            business.IsVerified,
+            business.ReviewLink,
+            business.PreferredContactMethod
+        );
+    }
 }
 

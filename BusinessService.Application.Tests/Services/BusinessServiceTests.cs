@@ -92,4 +92,43 @@ public class BusinessServiceTests
         act.Should().ThrowAsync<CategoryNotFoundException>()
             .WithMessage("One or more categories not found.");
     }
+
+    [Test]
+    public async Task UpdateBusinessAsync_ShouldUpdateBusiness_WhenValid()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+        var business = new Business { Id = id, Name = "Old Name" };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id))
+                         .ReturnsAsync(business);
+
+        // Act
+        var result = await _service.UpdateBusinessAsync(id, request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Updated Name");
+
+        _businessRepoMock.Verify(r => r.UpdateProfileAsync(It.Is<Business>(b => b.Name == "Updated Name")), Times.Once);
+    }
+
+    [Test]
+    public void UpdateBusinessAsync_ShouldThrow_WhenBusinessNotFound()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id))
+                         .ReturnsAsync((Business?)null);
+
+        // Act
+        Func<Task> act = async () => await _service.UpdateBusinessAsync(id, request);
+
+        // Assert
+        act.Should().ThrowAsync<BusinessNotFoundException>()
+            .WithMessage($"Business {id} not found.");
+    }
 }

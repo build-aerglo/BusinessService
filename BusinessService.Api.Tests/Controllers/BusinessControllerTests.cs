@@ -89,4 +89,45 @@ public class BusinessControllerTests
         ok.Should().NotBeNull();
         ok!.Value.Should().BeEquivalentTo(dto);
     }
+
+    [Test]
+    public async Task UpdateBusiness_ShouldReturnOk_WhenSuccessful()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+        var expectedDto = new BusinessDto(id, "Updated Name", null, false, 0, 0, null, new List<CategoryDto>(), null, null, null, null, null, null, null, null, null, null, null, null, false, null, null);
+
+        _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
+            .ReturnsAsync(expectedDto);
+
+        // Act
+        var result = await _controller.UpdateBusiness(id, request);
+
+        // Assert
+        var ok = result as OkObjectResult;
+        ok.Should().NotBeNull();
+        ok!.StatusCode.Should().Be(200);
+        ok.Value.Should().BeEquivalentTo(expectedDto);
+    }
+
+    [Test]
+    public async Task UpdateBusiness_ShouldReturnNotFound_WhenBusinessNotFound()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+
+        _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
+            .ThrowsAsync(new BusinessNotFoundException("Business not found."));
+
+        // Act
+        var result = await _controller.UpdateBusiness(id, request);
+
+        // Assert
+        var notFound = result as ObjectResult;
+        notFound.Should().NotBeNull();
+        notFound!.StatusCode.Should().Be(404);
+        notFound.Value.Should().BeEquivalentTo(new { error = "Business not found." });
+    }
 }

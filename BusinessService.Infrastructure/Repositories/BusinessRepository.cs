@@ -2,6 +2,7 @@ using BusinessService.Domain.Entities;
 using BusinessService.Domain.Repositories;
 using BusinessService.Infrastructure.Context;
 using Dapper;
+using Newtonsoft.Json;
 
 namespace BusinessService.Infrastructure.Repositories;
 
@@ -82,6 +83,55 @@ public class BusinessRepository : IBusinessRepository
         """;
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, business);
+    }
+
+    public async Task UpdateProfileAsync(Business business)
+    {
+        const string sql = """
+            UPDATE business
+            SET name = @Name,
+                website = @Website,
+                business_address = @BusinessAddress,
+                logo = @Logo,
+                opening_hours = CAST(@OpeningHours AS JSONB),
+                business_email = @BusinessEmail,
+                business_phone_number = @BusinessPhoneNumber,
+                cac_number = @CacNumber,
+                access_username = @AccessUsername,
+                access_number = @AccessNumber,
+                social_media_links = CAST(@SocialMediaLinks AS JSONB),
+                business_description = @BusinessDescription,
+                sector = @Sector,
+                media = @Media,
+                is_verified = @IsVerified,
+                review_link = @ReviewLink,
+                preferred_contact_method = @PreferredContactMethod,
+                updated_at = @UpdatedAt
+            WHERE id = @Id;
+        """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            business.Id,
+            business.Name,
+            business.Website,
+            business.BusinessAddress,
+            business.Logo,
+            OpeningHours = JsonConvert.SerializeObject(business.OpeningHours),
+            business.BusinessEmail,
+            business.BusinessPhoneNumber,
+            business.CacNumber,
+            business.AccessUsername,
+            business.AccessNumber,
+            SocialMediaLinks = JsonConvert.SerializeObject(business.SocialMediaLinks),
+            business.BusinessDescription,
+            business.Sector,
+            business.Media,
+            business.IsVerified,
+            business.ReviewLink,
+            business.PreferredContactMethod,
+            business.UpdatedAt
+        });
     }
 
     public async Task<List<Business>> GetBranchesAsync(Guid parentId)
