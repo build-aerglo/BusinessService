@@ -10,11 +10,13 @@ public class BusinessService : IBusinessService
 {
     private readonly IBusinessRepository _repository;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly ITagRepository _tagRepository;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, ITagRepository tagRepository)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
+        _tagRepository = tagRepository;
     }
 
     public async Task<BusinessDto> CreateBusinessAsync(CreateBusinessRequest request)
@@ -53,7 +55,7 @@ public class BusinessService : IBusinessService
             categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList()
         );
     }
-
+    
     public async Task<BusinessDto> GetBusinessAsync(Guid id)
     {
         var business = await _repository.FindByIdAsync(id)
@@ -102,6 +104,48 @@ public class BusinessService : IBusinessService
         parent.UpdatedAt = DateTime.UtcNow;
 
         await _repository.UpdateAsync(parent);
+    }
+    
+    public async Task UpdateBusinessAsync(UpdateBusinessRequest request)
+    {
+        var business = await _repository.FindByIdAsync(request.Id)
+                       ?? throw new BusinessNotFoundException($"Business {request.Id} not found.");
+
+        business.Name = request.Name;
+        business.Website = request.Website;
+        business.Description = request.Description;
+        business.UpdatedAt = DateTime.UtcNow;
+        
+        // Update category
+        var categories = await _categoryRepository.FindByIdAsync(request.CategoryId);
+        if (categories == null)
+            throw new CategoryNotFoundException("Category does not exist.");
+        
+        var updatedCategory = await _categoryRepository.UpdateBusinessCategoryAsync(request.CategoryId, request.Id); 
+        if(!updatedCategory)
+            throw new UpdateBusinessFailedException("Failed to update category.");
+        
+        
+        // Update Tags
+        // delete existing tags
+        var deleteTags = await _tagRepository.DeleteBusinessTagsAsync(request.Id);
+        if(!deleteTags)
+            throw new UpdateBusinessFailedException("Failed to delete tags.");
+        
+        // loop through array passed and add tags - hopefully
+        foreach (var tagName in request.TagIds)
+        {
+            // Check if tag exist, break if not
+            var tagExists = await _tagRepository.FindByIdAsync(tagName);
+            if (tagExists == null)
+                continue;
+
+            // add tag
+            await _tagRepository.AddBusinessTagAsync(tagName, request.Id);
+        }
+        
+        // Update business
+        await _repository.UpdateAsync(business);
     }
 }
 

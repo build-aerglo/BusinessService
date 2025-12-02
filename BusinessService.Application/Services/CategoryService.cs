@@ -18,7 +18,7 @@ public class CategoryService : ICategoryService
 
     public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequest request)
     {
-        // Check if name already exists (case-insensitive)
+        // Check if category exist
         var exists = await _repository.ExistsByNameAsync(request.Name);
         if (exists)
             throw new CategoryAlreadyExistsException($"Category name '{request.Name}' already exists.");
@@ -82,4 +82,7 @@ public class CategoryService : ICategoryService
             .Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId))
             .ToList();
     }
+
+    
+
 }

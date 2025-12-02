@@ -1,4 +1,5 @@
 using BusinessService.Application.DTOs;
+using BusinessService.Domain.Entities;
 
 namespace BusinessService.Application.Interfaces;
 

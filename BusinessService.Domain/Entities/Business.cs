@@ -14,4 +14,8 @@ public class Business
     public List<Category> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    
+    public string? Description { get; set; }
+    public List<Tags> Tags { get; set; } = new();
+    
 }

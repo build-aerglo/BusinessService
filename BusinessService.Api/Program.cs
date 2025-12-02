@@ -26,11 +26,13 @@ builder.Services.AddSingleton<DapperContext>();
 builder.Services.AddScoped<IBusinessRepository, BusinessRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IBusinessSettingsRepository, BusinessSettingsRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 // Register application services (application layer)
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBusinessSettingsService, BusinessSettingsService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
 
 // HTTP Client for UserService
@@ -57,13 +59,18 @@ builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
 });
 
 builder.Services.AddHostedService<DndModeExpiryBackgroundService>();
-// Optional: CORS (if calling from frontend)
+
+// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy
+            .SetIsOriginAllowed(_ => true)  // allow temporary until production
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -83,12 +90,11 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = ""; // load Swagger at root
 });
 
+app.UseCors("FrontendPolicy");
+
 // Optional: Global exception handler middleware (recommended)
 // app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
-
 // Enable attribute-routed controllers
 app.MapControllers();
 

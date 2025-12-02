@@ -83,6 +83,20 @@ public class BusinessRepository : IBusinessRepository
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, business);
     }
+    
+    public async Task UpdateBusinessProfileAsync(Business business)
+    {
+        const string sql = """
+                               UPDATE business
+                               SET name = @Name,
+                                   website = @Website,
+                                   description = @Description,
+                                   updated_at = @UpdatedAt
+                               WHERE id = @Id;
+                           """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, business);
+    }
 
     public async Task<List<Business>> GetBranchesAsync(Guid parentId)
     {

@@ -14,4 +14,5 @@ public interface ICategoryRepository
     Task AddAsync(Category category);
     Task<List<Category>> FindTopLevelAsync();
     Task<List<Category>> FindSubCategoriesAsync(Guid parentId);
+    Task<bool> UpdateBusinessCategoryAsync(Guid id, Guid businessId);
 }

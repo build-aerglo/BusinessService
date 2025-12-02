@@ -10,7 +10,7 @@ public class CategoryRepository : ICategoryRepository
     private readonly DapperContext _context;
 
     public CategoryRepository(DapperContext context) => _context = context;
-
+    
     public async Task<Category?> FindByIdAsync(Guid id)
     {
         const string sql = "SELECT id, name, description, parent_category_id AS ParentCategoryId FROM category WHERE id = @id;";
@@ -80,5 +80,19 @@ public class CategoryRepository : ICategoryRepository
         using var conn = _context.CreateConnection();
         var rows = await conn.QueryAsync<Category>(sql, new { parentId });
         return rows.ToList();
+    }
+    
+    
+    public async Task<bool> UpdateBusinessCategoryAsync(Guid id, Guid businessId)
+    {
+        const string sql = """
+                               UPDATE business_category
+                               SET category_id = @id
+                               WHERE business_id = @businessId;
+                           """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new {id, businessId});
+        
+        return true;
     }
 }

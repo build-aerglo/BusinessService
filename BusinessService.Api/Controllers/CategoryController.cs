@@ -18,7 +18,7 @@ public class CategoryController : ControllerBase
         _service = service;
         _logger = logger;
     }
-
+    
     /// <summary>
     /// Creates a new category.
     /// </summary>

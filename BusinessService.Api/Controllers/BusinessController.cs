@@ -76,4 +76,34 @@ public class BusinessController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+    
+    [HttpPost("update-business")]
+    public async Task<IActionResult> UpdateBusinessProfile(UpdateBusinessRequest dto)
+    {
+        try
+        {
+            await _service.UpdateBusinessAsync(dto);
+            return Ok();
+        }
+        catch (BusinessNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Business not found: {Message}", ex.Message);
+            return StatusCode(400, new { error = "Business not found" });
+        }
+        catch (CategoryNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Category not found: {Message}.", ex.Message);
+            return StatusCode(400, new { error = "Category not found" });
+        }
+        catch (UpdateBusinessFailedException ex)
+        {
+            _logger.LogWarning(ex, "Business not updated: {Message}.", ex.Message);
+            return StatusCode(500, new { error = "Business not updated" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error occured: {ex}.", ex);
+            return StatusCode(500, new { error = "An error occured" });
+        }
+    }
 }
