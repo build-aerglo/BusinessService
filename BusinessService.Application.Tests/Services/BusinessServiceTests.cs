@@ -4,6 +4,7 @@ using BusinessService.Domain.Exceptions;
 using BusinessService.Domain.Repositories;
 using FluentAssertions;
 using Moq;
+using Npgsql;
 
 namespace BusinessService.Application.Tests.Services;
 
@@ -130,5 +131,27 @@ public class BusinessServiceTests
         // Assert
         act.Should().ThrowAsync<BusinessNotFoundException>()
             .WithMessage($"Business {id} not found.");
+    }
+
+    [Test]
+    public void UpdateBusinessAsync_ShouldThrow_WhenUniqueConstraintViolated()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+        var business = new Business { Id = id, Name = "Old Name" };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id))
+                         .ReturnsAsync(business);
+
+        _businessRepoMock.Setup(r => r.UpdateProfileAsync(It.IsAny<Business>()))
+                         .ThrowsAsync(new PostgresException("message", "severity", "23505", "detail"));
+
+        // Act
+        Func<Task> act = async () => await _service.UpdateBusinessAsync(id, request);
+
+        // Assert
+        act.Should().ThrowAsync<BusinessConflictException>()
+            .WithMessage("The provided business email or access username is already in use.");
     }
 }

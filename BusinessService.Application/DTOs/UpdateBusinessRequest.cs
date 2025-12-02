@@ -18,4 +18,9 @@ public class UpdateBusinessRequest
     public bool? IsVerified { get; set; }
     public string? ReviewLink { get; set; }
     public string? PreferredContactMethod { get; set; }
+    public string[]? Highlights { get; set; }
+    public string[]? Tags { get; set; }
+    public string? AverageResponseTime { get; set; }
+    public long? ProfileClicks { get; set; }
+    public List<FaqDto>? Faqs { get; set; }
 }

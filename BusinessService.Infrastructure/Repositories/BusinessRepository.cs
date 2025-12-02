@@ -72,7 +72,7 @@ public class BusinessRepository : IBusinessRepository
         return business;
     }
 
-    public async Task UpdateAsync(Business business)
+    public async Task UpdateRatingsAsync(Business business)
     {
         const string sql = """
             UPDATE business
@@ -105,6 +105,11 @@ public class BusinessRepository : IBusinessRepository
                 is_verified = @IsVerified,
                 review_link = @ReviewLink,
                 preferred_contact_method = @PreferredContactMethod,
+                highlights = @Highlights,
+                tags = @Tags,
+                average_response_time = @AverageResponseTime,
+                profile_clicks = @ProfileClicks,
+                faqs = CAST(@Faqs AS JSONB),
                 updated_at = @UpdatedAt
             WHERE id = @Id;
         """;
@@ -128,6 +133,11 @@ public class BusinessRepository : IBusinessRepository
             business.IsVerified,
             business.ReviewLink,
             business.PreferredContactMethod,
+            business.Highlights,
+            business.Tags,
+            business.AverageResponseTime,
+            business.ProfileClicks,
+            Faqs = JsonConvert.SerializeObject(business.Faqs),
             business.UpdatedAt
         });
     }

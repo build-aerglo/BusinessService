@@ -116,6 +116,11 @@ CREATE TABLE business (
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     review_link TEXT,
     preferred_contact_method VARCHAR(50),
+    highlights TEXT[],
+    tags TEXT[],
+    average_response_time VARCHAR(50),
+    profile_clicks BIGINT NOT NULL DEFAULT 0,
+    faqs JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     CONSTRAINT fk_parent_business FOREIGN KEY (parent_business_id)

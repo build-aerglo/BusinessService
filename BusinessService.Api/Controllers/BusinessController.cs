@@ -80,7 +80,7 @@ public class BusinessController : ControllerBase
     /// <summary>
     /// Updates a business's profile.
     /// </summary>
-    [HttpPut("{id:guid}")]
+    [HttpPatch("{id:guid}")]
     public async Task<IActionResult> UpdateBusiness(Guid id, [FromBody] UpdateBusinessRequest request)
     {
         try
@@ -92,6 +92,11 @@ public class BusinessController : ControllerBase
         {
             _logger.LogWarning(ex, "Business not found during update: {Message}", ex.Message);
             return NotFound(new { error = ex.Message });
+        }
+        catch (BusinessConflictException ex)
+        {
+            _logger.LogWarning(ex, "Business conflict during update: {Message}", ex.Message);
+            return Conflict(new { error = ex.Message });
         }
     }
 }

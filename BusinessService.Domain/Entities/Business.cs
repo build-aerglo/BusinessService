@@ -24,6 +24,11 @@ public class Business
     public bool IsVerified { get; set; }
     public string? ReviewLink { get; set; }
     public string? PreferredContactMethod { get; set; }
+    public string[]? Highlights { get; set; }
+    public string[]? Tags { get; set; }
+    public string? AverageResponseTime { get; set; }
+    public long ProfileClicks { get; set; }
+    public List<Faq>? Faqs { get; set; }
 
     public List<Category> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

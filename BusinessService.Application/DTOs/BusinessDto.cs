@@ -22,5 +22,10 @@ public record BusinessDto(
     string[]? Media,
     bool IsVerified,
     string? ReviewLink,
-    string? PreferredContactMethod
+    string? PreferredContactMethod,
+    string[]? Highlights,
+    string[]? Tags,
+    string? AverageResponseTime,
+    long ProfileClicks,
+    List<FaqDto>? Faqs
 );

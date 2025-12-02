@@ -96,7 +96,7 @@ public class BusinessControllerTests
         // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
-        var expectedDto = new BusinessDto(id, "Updated Name", null, false, 0, 0, null, new List<CategoryDto>(), null, null, null, null, null, null, null, null, null, null, false, null, null);
+        var expectedDto = new BusinessDto(id, "Updated Name", null, false, 0, 0, null, new List<CategoryDto>(), null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, 0, new List<FaqDto>());
 
         _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
             .ReturnsAsync(expectedDto);
@@ -129,5 +129,25 @@ public class BusinessControllerTests
         notFound.Should().NotBeNull();
         notFound!.StatusCode.Should().Be(404);
         notFound.Value.Should().BeEquivalentTo(new { error = "Business not found." });
+    }
+
+    [Test]
+    public async Task UpdateBusiness_ShouldReturnConflict_WhenBusinessConflict()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+
+        _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
+            .ThrowsAsync(new BusinessConflictException("Business conflict."));
+
+        // Act
+        var result = await _controller.UpdateBusiness(id, request);
+
+        // Assert
+        var conflict = result as ObjectResult;
+        conflict.Should().NotBeNull();
+        conflict!.StatusCode.Should().Be(409);
+        conflict.Value.Should().BeEquivalentTo(new { error = "Business conflict." });
     }
 }

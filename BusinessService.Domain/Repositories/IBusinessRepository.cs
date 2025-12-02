@@ -7,7 +7,7 @@ public interface IBusinessRepository
     Task<bool> ExistsByNameAsync(string name);
     Task<Business?> FindByIdAsync(Guid id);
     Task AddAsync(Business business);
-    Task UpdateAsync(Business business);
+    Task UpdateRatingsAsync(Business business);
     Task UpdateProfileAsync(Business business);
     Task<List<Business>> GetBranchesAsync(Guid parentId);
 }
