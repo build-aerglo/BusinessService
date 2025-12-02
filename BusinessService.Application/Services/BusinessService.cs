@@ -121,7 +121,6 @@ public class BusinessService : IBusinessService
         business.AccessNumber = request.AccessNumber ?? business.AccessNumber;
         business.SocialMediaLinks = request.SocialMediaLinks ?? business.SocialMediaLinks;
         business.BusinessDescription = request.BusinessDescription ?? business.BusinessDescription;
-        business.Sector = request.Sector ?? business.Sector;
         business.Media = request.Media ?? business.Media;
         if (request.IsVerified.HasValue)
         {
@@ -152,7 +151,6 @@ public class BusinessService : IBusinessService
             business.AccessNumber,
             business.SocialMediaLinks,
             business.BusinessDescription,
-            business.Sector,
             business.Media,
             business.IsVerified,
             business.ReviewLink,

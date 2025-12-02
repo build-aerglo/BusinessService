@@ -96,7 +96,7 @@ public class BusinessControllerTests
         // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
-        var expectedDto = new BusinessDto(id, "Updated Name", null, false, 0, 0, null, new List<CategoryDto>(), null, null, null, null, null, null, null, null, null, null, null, null, false, null, null);
+        var expectedDto = new BusinessDto(id, "Updated Name", null, false, 0, 0, null, new List<CategoryDto>(), null, null, null, null, null, null, null, null, null, null, false, null, null);
 
         _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
             .ReturnsAsync(expectedDto);

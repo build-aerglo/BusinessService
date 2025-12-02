@@ -19,7 +19,6 @@ public record BusinessDto(
     string? AccessNumber,
     Dictionary<string, string>? SocialMediaLinks,
     string? BusinessDescription,
-    string? Sector,
     string[]? Media,
     bool IsVerified,
     string? ReviewLink,

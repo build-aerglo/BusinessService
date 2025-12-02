@@ -112,7 +112,6 @@ CREATE TABLE business (
     access_number VARCHAR(50),
     social_media_links JSONB,
     business_description TEXT,
-    sector VARCHAR(100),
     media TEXT[],
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     review_link TEXT,

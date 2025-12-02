@@ -9,7 +9,6 @@ ALTER TABLE business
     ADD COLUMN access_number VARCHAR(50),
     ADD COLUMN social_media_links JSONB,
     ADD COLUMN business_description TEXT,
-    ADD COLUMN sector VARCHAR(100),
     ADD COLUMN media TEXT[],
     ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     ADD COLUMN review_link TEXT,
