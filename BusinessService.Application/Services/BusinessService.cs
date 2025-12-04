@@ -12,13 +12,55 @@ public class BusinessService : IBusinessService
     private readonly IBusinessRepository _repository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IQrCodeService _qrCodeService;
+    private readonly IBusinessSearchProducer _searchProducer;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
         _qrCodeService = qrCodeService;
+        _searchProducer = searchProducer;
     }
+    
+    private static BusinessDto MapToDto(Business business)
+    {
+        return new BusinessDto(
+            business.Id,
+            business.Name,
+            business.Website,
+            business.IsBranch,
+            business.AvgRating,
+            business.ReviewCount,
+            business.ParentBusinessId,
+            business.Categories.Select(c => new CategoryDto(
+                c.Id,
+                c.Name,
+                c.Description,
+                c.ParentCategoryId
+            )).ToList(),
+            business.BusinessAddress,
+            business.Logo,
+            business.OpeningHours,
+            business.BusinessEmail,
+            business.BusinessPhoneNumber,
+            business.CacNumber,
+            business.AccessUsername,
+            business.AccessNumber,
+            business.SocialMediaLinks,
+            business.BusinessDescription,
+            business.Media,
+            business.IsVerified,
+            business.ReviewLink,
+            business.PreferredContactMethod,
+            business.Highlights,
+            business.Tags,
+            business.AverageResponseTime,
+            business.ProfileClicks,
+            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
+            business.QrCodeBase64
+        );
+    }
+
 
     public async Task<BusinessDto> CreateBusinessAsync(CreateBusinessRequest request)
 {
@@ -50,41 +92,9 @@ public class BusinessService : IBusinessService
 
     await _repository.AddAsync(business);
 
-    return new BusinessDto(
-        business.Id,
-        business.Name,
-        business.Website,
-        business.IsBranch,
-        business.AvgRating,
-        business.ReviewCount,
-        business.ParentBusinessId,
-        categories.Select(c => new CategoryDto(
-            c.Id,
-            c.Name,
-            c.Description,
-            c.ParentCategoryId
-        )).ToList(),
-        business.BusinessAddress,
-        business.Logo,
-        business.OpeningHours,
-        business.BusinessEmail,
-        business.BusinessPhoneNumber,
-        business.CacNumber,
-        business.AccessUsername,
-        business.AccessNumber,
-        business.SocialMediaLinks,
-        business.BusinessDescription,
-        business.Media,
-        business.IsVerified,
-        business.ReviewLink,
-        business.PreferredContactMethod,
-        business.Highlights,
-        business.Tags,
-        business.AverageResponseTime,
-        business.ProfileClicks,
-        business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
-        business.QrCodeBase64 
-    );
+    var dto = MapToDto(business);
+    await _searchProducer.PublishBusinessCreatedAsync(dto);
+    return dto;
 }
 
 
@@ -202,37 +212,12 @@ public class BusinessService : IBusinessService
         {
             throw new BusinessConflictException("The provided business email or access username is already in use.");
         }
+        
+        var dto = MapToDto(business);
+        
+        await _searchProducer.PublishBusinessUpdatedAsync(dto);
 
-        return new BusinessDto(
-            business.Id,
-            business.Name,
-            business.Website,
-            business.IsBranch,
-            business.AvgRating,
-            business.ReviewCount,
-            business.ParentBusinessId,
-            business.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
-            business.BusinessAddress,
-            business.Logo,
-            business.OpeningHours,
-            business.BusinessEmail,
-            business.BusinessPhoneNumber,
-            business.CacNumber,
-            business.AccessUsername,
-            business.AccessNumber,
-            business.SocialMediaLinks,
-            business.BusinessDescription,
-            business.Media,
-            business.IsVerified,
-            business.ReviewLink,
-            business.PreferredContactMethod,
-            business.Highlights,
-            business.Tags,
-            business.AverageResponseTime,
-            business.ProfileClicks,
-            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
-            business.QrCodeBase64
-        );
+        return dto;
     }
 }
 

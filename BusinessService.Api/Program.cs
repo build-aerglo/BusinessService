@@ -42,6 +42,17 @@ SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, object>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<string>>());
 
+// Register SearchService HttpClient producer
+builder.Services.AddHttpClient<IBusinessSearchProducer, BusinessSearchHttpProducer>(client =>
+{
+    var searchServiceUrl = builder.Configuration["Services:SearchServiceUrl"];
+    if (string.IsNullOrWhiteSpace(searchServiceUrl))
+        throw new InvalidOperationException("Missing configuration: SearchServiceUrl");
+
+    client.BaseAddress = new Uri(searchServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 
 // HTTP Client for UserService
 builder.Services.AddHttpClient<IBusinessRepServiceClient, BusinessRepServiceClient>(client =>
