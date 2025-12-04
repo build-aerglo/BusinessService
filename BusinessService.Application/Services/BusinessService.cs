@@ -51,8 +51,33 @@ public class BusinessService : IBusinessService
             business.AvgRating,
             business.ReviewCount,
             business.ParentBusinessId,
-            categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList()
+            categories.Select(c => new CategoryDto(
+                c.Id,
+                c.Name,
+                c.Description,
+                c.ParentCategoryId
+            )).ToList(),
+            business.BusinessAddress,
+            business.Logo,
+            business.OpeningHours,
+            business.BusinessEmail,
+            business.BusinessPhoneNumber,
+            business.CacNumber,
+            business.AccessUsername,
+            business.AccessNumber,
+            business.SocialMediaLinks,
+            business.BusinessDescription,
+            business.Media,
+            business.IsVerified,
+            business.ReviewLink,
+            business.PreferredContactMethod,
+            business.Highlights,
+            business.Tags,
+            business.AverageResponseTime,
+            business.ProfileClicks,
+            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList()
         );
+
     }
 
     public async Task<BusinessDto> GetBusinessAsync(Guid id)
@@ -155,7 +180,10 @@ public class BusinessService : IBusinessService
         {
             business.ProfileClicks = request.ProfileClicks.Value;
         }
-        business.Faqs = request.Faqs?.Select(f => new BusinessService.Domain.Entities.Faq(f.Question, f.Answer)).ToList() ?? business.Faqs;
+        business.Faqs = request.Faqs?
+                            .Select(f => new Faq(f.Question, f.Answer))
+                            .ToList()
+                        ?? business.Faqs;
         business.UpdatedAt = DateTime.UtcNow;
 
         try

@@ -24,6 +24,40 @@ public class BusinessControllerTests
         _controller = new BusinessController(_serviceMock.Object, _loggerMock.Object);
     }
 
+    // Helper to generate valid DTO
+    private BusinessDto CreateDto(Guid? id = null, string name = "Test Business")
+    {
+        return new BusinessDto(
+            id ?? Guid.NewGuid(),
+            name,
+            "https://example.com",
+            false,
+            0m,
+            0,
+            null,
+            new List<CategoryDto>(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0,
+            new List<FaqDto>()
+        );
+    }
+
     [Test]
     public async Task CreateBusiness_ShouldReturnCreated_WhenSuccessful()
     {
@@ -35,9 +69,7 @@ public class BusinessControllerTests
             CategoryIds = new List<Guid> { Guid.NewGuid() }
         };
 
-        var expectedDto = new BusinessDto(
-            Guid.NewGuid(), "Test Business", "https://example.com", false, 0, 0, null, new List<CategoryDto>()
-        );
+        var expectedDto = CreateDto(name: "Test Business");
 
         _serviceMock.Setup(s => s.CreateBusinessAsync(request))
             .ReturnsAsync(expectedDto);
@@ -80,7 +112,8 @@ public class BusinessControllerTests
     public async Task GetBusiness_ShouldReturnOk_WhenFound()
     {
         var id = Guid.NewGuid();
-        var dto = new BusinessDto(id, "Shop", null, false, 4.2m, 12, null, new List<CategoryDto>());
+        var dto = CreateDto(id, "Shop");
+
         _serviceMock.Setup(s => s.GetBusinessAsync(id)).ReturnsAsync(dto);
 
         var result = await _controller.GetBusiness(id);
@@ -96,7 +129,7 @@ public class BusinessControllerTests
         // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
-        var expectedDto = new BusinessDto(id, "Updated Name", null, false, 0, 0, null, new List<CategoryDto>(), null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, 0, new List<FaqDto>());
+        var expectedDto = CreateDto(id, "Updated Name");
 
         _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
             .ReturnsAsync(expectedDto);
