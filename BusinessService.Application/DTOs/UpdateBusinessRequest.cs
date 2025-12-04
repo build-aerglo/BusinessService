@@ -14,7 +14,7 @@ public class UpdateBusinessRequest
     public string? AccessNumber { get; set; }
     public Dictionary<string, string>? SocialMediaLinks { get; set; }
     public string? BusinessDescription { get; set; }
-    public string[]? Media { get; set; }
+    public List<string>? Media { get; set; }
     public bool? IsVerified { get; set; }
     public string? ReviewLink { get; set; }
     public string? PreferredContactMethod { get; set; }

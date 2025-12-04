@@ -22,33 +22,148 @@ public class BusinessRepository : IBusinessRepository
         return await conn.ExecuteScalarAsync<bool>(sql, new { name });
     }
 
-    public async Task AddAsync(Business business)
+public async Task AddAsync(Business business)
+{
+    const string sql = """
+        INSERT INTO business (
+            id,
+            name,
+            website,
+            is_branch,
+            avg_rating,
+            review_count,
+            parent_business_id,
+            business_address,
+            logo,
+            opening_hours,
+            business_email,
+            business_phone_number,
+            cac_number,
+            access_username,
+            access_number,
+            social_media_links,
+            business_description,
+            media,
+            is_verified,
+            review_link,
+            preferred_contact_method,
+            highlights,
+            tags,
+            average_response_time,
+            profile_clicks,
+            faqs,
+            qr_code_base64,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            @Id,
+            @Name,
+            @Website,
+            @IsBranch,
+            @AvgRating,
+            @ReviewCount,
+            @ParentBusinessId,
+            @BusinessAddress,
+            @Logo,
+            CAST(@OpeningHours AS JSONB),
+            @BusinessEmail,
+            @BusinessPhoneNumber,
+            @CacNumber,
+            @AccessUsername,
+            @AccessNumber,
+            CAST(@SocialMediaLinks AS JSONB),
+            @BusinessDescription,
+            CAST(@Media AS JSONB),
+            @IsVerified,
+            @ReviewLink,
+            @PreferredContactMethod,
+            @Highlights,   -- TEXT[]
+            @Tags,         -- TEXT[]
+            @AverageResponseTime,
+            @ProfileClicks,
+            CAST(@Faqs AS JSONB),
+            @QrCodeBase64,
+            @CreatedAt,
+            @UpdatedAt
+        );
+    """;
+
+    using var conn = _context.CreateConnection();
+
+    await conn.ExecuteAsync(sql, new
     {
-        const string sql = """
-            INSERT INTO business (
-                id, name, website, is_branch, avg_rating, review_count,
-                parent_business_id, created_at, updated_at
-            ) VALUES (
-                @Id, @Name, @Website, @IsBranch, @AvgRating, @ReviewCount,
-                @ParentBusinessId, @CreatedAt, @UpdatedAt
-            );
+        business.Id,
+        business.Name,
+        business.Website,
+        business.IsBranch,
+        business.AvgRating,
+        business.ReviewCount,
+        business.ParentBusinessId,
+        business.BusinessAddress,
+        business.Logo,
+
+        // JSONB fields
+        OpeningHours = business.OpeningHours != null
+            ? JsonConvert.SerializeObject(business.OpeningHours)
+            : null,
+
+        business.BusinessEmail,
+        business.BusinessPhoneNumber,
+        business.CacNumber,
+        business.AccessUsername,
+        business.AccessNumber,
+
+        SocialMediaLinks = business.SocialMediaLinks != null
+            ? JsonConvert.SerializeObject(business.SocialMediaLinks)
+            : null,
+
+        business.BusinessDescription,
+
+        Media = business.Media != null
+            ? JsonConvert.SerializeObject(business.Media)
+            : null,
+
+        business.IsVerified,
+        business.ReviewLink,
+        business.PreferredContactMethod,
+
+        // TEXT[] fields — passed as string[] directly
+        Highlights = business.Highlights,
+        Tags = business.Tags,
+
+        business.AverageResponseTime,
+        business.ProfileClicks,
+
+        Faqs = business.Faqs != null
+            ? JsonConvert.SerializeObject(business.Faqs)
+            : null,
+
+        business.QrCodeBase64,
+        business.CreatedAt,
+        business.UpdatedAt
+    });
+
+    // Insert category relations
+    if (business.Categories.Any())
+    {
+        const string joinSql = """
+            INSERT INTO business_category (business_id, category_id)
+            VALUES (@BusinessId, @CategoryId)
+            ON CONFLICT DO NOTHING;
         """;
 
-        using var conn = _context.CreateConnection();
-        await conn.ExecuteAsync(sql, business);
-
-        if (business.Categories.Any())
+        var joinRows = business.Categories.Select(c => new
         {
-            const string joinSql = """
-                INSERT INTO business_category (business_id, category_id)
-                VALUES (@BusinessId, @CategoryId)
-                ON CONFLICT DO NOTHING;
-            """;
+            BusinessId = business.Id,
+            CategoryId = c.Id
+        });
 
-            var joinRows = business.Categories.Select(c => new { BusinessId = business.Id, CategoryId = c.Id });
-            await conn.ExecuteAsync(joinSql, joinRows);
-        }
+        await conn.ExecuteAsync(joinSql, joinRows);
     }
+}
+
+
 
     public async Task<Business?> FindByIdAsync(Guid id)
     {
@@ -86,61 +201,89 @@ public class BusinessRepository : IBusinessRepository
     }
 
     public async Task UpdateProfileAsync(Business business)
+{
+    const string sql = """
+        UPDATE business
+        SET name = @Name,
+            website = @Website,
+            business_address = @BusinessAddress,
+            logo = @Logo,
+            opening_hours = CAST(@OpeningHours AS JSONB),
+            business_email = @BusinessEmail,
+            business_phone_number = @BusinessPhoneNumber,
+            cac_number = @CacNumber,
+            access_username = @AccessUsername,
+            access_number = @AccessNumber,
+            social_media_links = CAST(@SocialMediaLinks AS JSONB),
+            business_description = @BusinessDescription,
+            media = CAST(@Media AS JSONB),
+            is_verified = @IsVerified,
+            review_link = @ReviewLink,
+            preferred_contact_method = @PreferredContactMethod,
+            highlights = CAST(@Highlights AS JSONB),
+            tags = CAST(@Tags AS JSONB),
+            average_response_time = @AverageResponseTime,
+            profile_clicks = @ProfileClicks,
+            faqs = CAST(@Faqs AS JSONB),
+            updated_at = @UpdatedAt
+        WHERE id = @Id;
+    """;
+
+    using var conn = _context.CreateConnection();
+
+    await conn.ExecuteAsync(sql, new
     {
-        const string sql = """
-            UPDATE business
-            SET name = @Name,
-                website = @Website,
-                business_address = @BusinessAddress,
-                logo = @Logo,
-                opening_hours = CAST(@OpeningHours AS JSONB),
-                business_email = @BusinessEmail,
-                business_phone_number = @BusinessPhoneNumber,
-                cac_number = @CacNumber,
-                access_username = @AccessUsername,
-                access_number = @AccessNumber,
-                social_media_links = CAST(@SocialMediaLinks AS JSONB),
-                business_description = @BusinessDescription,
-                media = @Media,
-                is_verified = @IsVerified,
-                review_link = @ReviewLink,
-                preferred_contact_method = @PreferredContactMethod,
-                highlights = @Highlights,
-                tags = @Tags,
-                average_response_time = @AverageResponseTime,
-                profile_clicks = @ProfileClicks,
-                faqs = CAST(@Faqs AS JSONB),
-                updated_at = @UpdatedAt
-            WHERE id = @Id;
-        """;
-        using var conn = _context.CreateConnection();
-        await conn.ExecuteAsync(sql, new
-        {
-            business.Id,
-            business.Name,
-            business.Website,
-            business.BusinessAddress,
-            business.Logo,
-            OpeningHours = JsonConvert.SerializeObject(business.OpeningHours),
-            business.BusinessEmail,
-            business.BusinessPhoneNumber,
-            business.CacNumber,
-            business.AccessUsername,
-            business.AccessNumber,
-            SocialMediaLinks = JsonConvert.SerializeObject(business.SocialMediaLinks),
-            business.BusinessDescription,
-            business.Media,
-            business.IsVerified,
-            business.ReviewLink,
-            business.PreferredContactMethod,
-            business.Highlights,
-            business.Tags,
-            business.AverageResponseTime,
-            business.ProfileClicks,
-            Faqs = JsonConvert.SerializeObject(business.Faqs),
-            business.UpdatedAt
-        });
-    }
+        business.Id,
+        business.Name,
+        business.Website,
+        business.BusinessAddress,
+        business.Logo,
+
+        // JSONB fields — always serialize before casting
+        OpeningHours = business.OpeningHours != null
+            ? JsonConvert.SerializeObject(business.OpeningHours)
+            : null,
+
+        business.BusinessEmail,
+        business.BusinessPhoneNumber,
+        business.CacNumber,
+        business.AccessUsername,
+        business.AccessNumber,
+
+        SocialMediaLinks = business.SocialMediaLinks != null
+            ? JsonConvert.SerializeObject(business.SocialMediaLinks)
+            : null,
+
+        business.BusinessDescription,
+
+        Media = business.Media != null
+            ? JsonConvert.SerializeObject(business.Media)
+            : null,
+
+        business.IsVerified,
+        business.ReviewLink,
+        business.PreferredContactMethod,
+
+        Highlights = business.Highlights != null
+            ? JsonConvert.SerializeObject(business.Highlights)
+            : null,
+
+        Tags = business.Tags != null
+            ? JsonConvert.SerializeObject(business.Tags)
+            : null,
+
+        business.AverageResponseTime,
+        business.ProfileClicks,
+
+        Faqs = business.Faqs != null
+            ? JsonConvert.SerializeObject(business.Faqs)
+            : null,
+
+        business.UpdatedAt
+    });
+}
+
+
 
     public async Task<List<Business>> GetBranchesAsync(Guid parentId)
     {

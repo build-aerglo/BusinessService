@@ -2,6 +2,7 @@
 using BusinessService.Domain.Entities;
 using BusinessService.Domain.Exceptions;
 using BusinessService.Domain.Repositories;
+using BusinessService.Application.Interfaces;
 using FluentAssertions;
 using Moq;
 using Npgsql;
@@ -13,6 +14,7 @@ public class BusinessServiceTests
 {
     private Mock<IBusinessRepository> _businessRepoMock = null!;
     private Mock<ICategoryRepository> _categoryRepoMock = null!;
+    private Mock<IQrCodeService> _qrCodeServiceMock = null!;
     private BusinessService.Application.Services.BusinessService _service = null!;
 
     [SetUp]
@@ -20,7 +22,17 @@ public class BusinessServiceTests
     {
         _businessRepoMock = new Mock<IBusinessRepository>();
         _categoryRepoMock = new Mock<ICategoryRepository>();
-        _service = new BusinessService.Application.Services.BusinessService(_businessRepoMock.Object, _categoryRepoMock.Object);
+        _qrCodeServiceMock = new Mock<IQrCodeService>();
+
+        // Always return a fixed Base64 value for testing
+        _qrCodeServiceMock.Setup(q => q.GenerateQrCodeBase64(It.IsAny<string>()))
+                          .Returns("BASE64_QR_CODE_TEST_VALUE");
+
+        _service = new BusinessService.Application.Services.BusinessService(
+            _businessRepoMock.Object,
+            _categoryRepoMock.Object,
+            _qrCodeServiceMock.Object
+        );
     }
 
     [Test]
@@ -49,8 +61,10 @@ public class BusinessServiceTests
         result.Should().NotBeNull();
         result.Name.Should().Be("Alpha Coffee");
         result.Categories.Should().ContainSingle(c => c.Name == "Coffee");
+        result.QrCodeBase64.Should().Be("BASE64_QR_CODE_TEST_VALUE");
 
         _businessRepoMock.Verify(r => r.AddAsync(It.IsAny<Business>()), Times.Once);
+        _qrCodeServiceMock.Verify(q => q.GenerateQrCodeBase64(It.IsAny<string>()), Times.Once);
     }
 
     [Test]
@@ -97,38 +111,34 @@ public class BusinessServiceTests
     [Test]
     public async Task UpdateBusinessAsync_ShouldUpdateBusiness_WhenValid()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
         var business = new Business { Id = id, Name = "Old Name" };
 
-        _businessRepoMock.Setup(r => r.FindByIdAsync(id))
-                         .ReturnsAsync(business);
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
 
-        // Act
         var result = await _service.UpdateBusinessAsync(id, request);
 
-        // Assert
         result.Should().NotBeNull();
         result.Name.Should().Be("Updated Name");
 
         _businessRepoMock.Verify(r => r.UpdateProfileAsync(It.Is<Business>(b => b.Name == "Updated Name")), Times.Once);
+
+        // IMPORTANT — QR is NOT regenerated
+        _qrCodeServiceMock.Verify(q => q.GenerateQrCodeBase64(It.IsAny<string>()), Times.Never);
     }
 
     [Test]
     public void UpdateBusinessAsync_ShouldThrow_WhenBusinessNotFound()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(id))
                          .ReturnsAsync((Business?)null);
 
-        // Act
         Func<Task> act = async () => await _service.UpdateBusinessAsync(id, request);
 
-        // Assert
         act.Should().ThrowAsync<BusinessNotFoundException>()
             .WithMessage($"Business {id} not found.");
     }
@@ -136,7 +146,6 @@ public class BusinessServiceTests
     [Test]
     public void UpdateBusinessAsync_ShouldThrow_WhenUniqueConstraintViolated()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
         var business = new Business { Id = id, Name = "Old Name" };
@@ -145,12 +154,10 @@ public class BusinessServiceTests
                          .ReturnsAsync(business);
 
         _businessRepoMock.Setup(r => r.UpdateProfileAsync(It.IsAny<Business>()))
-                         .ThrowsAsync(new PostgresException("message", "severity", "23505", "detail"));
+                         .ThrowsAsync(new PostgresException("msg", "severity", "23505", "detail"));
 
-        // Act
         Func<Task> act = async () => await _service.UpdateBusinessAsync(id, request);
 
-        // Assert
         act.Should().ThrowAsync<BusinessConflictException>()
             .WithMessage("The provided business email or access username is already in use.");
     }

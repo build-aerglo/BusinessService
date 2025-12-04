@@ -11,74 +11,81 @@ public class BusinessService : IBusinessService
 {
     private readonly IBusinessRepository _repository;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IQrCodeService _qrCodeService;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
+        _qrCodeService = qrCodeService;
     }
 
     public async Task<BusinessDto> CreateBusinessAsync(CreateBusinessRequest request)
+{
+    if (await _repository.ExistsByNameAsync(request.Name))
+        throw new BusinessAlreadyExistsException($"Business name '{request.Name}' already exists.");
+
+    var categories = await _categoryRepository.FindAllByIdsAsync(request.CategoryIds);
+    if (categories.Count != request.CategoryIds.Count)
+        throw new CategoryNotFoundException("One or more categories not found.");
+
+    var business = new Business
     {
-        if (await _repository.ExistsByNameAsync(request.Name))
-            throw new BusinessAlreadyExistsException($"Business name '{request.Name}' already exists.");
+        Id = Guid.NewGuid(),
+        Name = request.Name,
+        Website = request.Website,
+        IsBranch = request.ParentBusinessId.HasValue,
+        ParentBusinessId = request.ParentBusinessId,
+        AvgRating = 0,
+        ReviewCount = 0,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+        Categories = categories
+    };
 
-        var categories = await _categoryRepository.FindAllByIdsAsync(request.CategoryIds);
-        if (categories.Count != request.CategoryIds.Count)
-            throw new CategoryNotFoundException("One or more categories not found.");
+    // *** Generate the QR code content ***
+    string qrContent = $"https://yourdomain.com/business/{business.Id}";
+    business.QrCodeBase64 = _qrCodeService.GenerateQrCodeBase64(qrContent);
 
-        var business = new Business
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Website = request.Website,
-            IsBranch = request.ParentBusinessId.HasValue,
-            ParentBusinessId = request.ParentBusinessId,
-            AvgRating = 0,
-            ReviewCount = 0,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            Categories = categories
-        };
+    await _repository.AddAsync(business);
 
-        await _repository.AddAsync(business);
+    return new BusinessDto(
+        business.Id,
+        business.Name,
+        business.Website,
+        business.IsBranch,
+        business.AvgRating,
+        business.ReviewCount,
+        business.ParentBusinessId,
+        categories.Select(c => new CategoryDto(
+            c.Id,
+            c.Name,
+            c.Description,
+            c.ParentCategoryId
+        )).ToList(),
+        business.BusinessAddress,
+        business.Logo,
+        business.OpeningHours,
+        business.BusinessEmail,
+        business.BusinessPhoneNumber,
+        business.CacNumber,
+        business.AccessUsername,
+        business.AccessNumber,
+        business.SocialMediaLinks,
+        business.BusinessDescription,
+        business.Media,
+        business.IsVerified,
+        business.ReviewLink,
+        business.PreferredContactMethod,
+        business.Highlights,
+        business.Tags,
+        business.AverageResponseTime,
+        business.ProfileClicks,
+        business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
+        business.QrCodeBase64 
+    );
+}
 
-        return new BusinessDto(
-            business.Id,
-            business.Name,
-            business.Website,
-            business.IsBranch,
-            business.AvgRating,
-            business.ReviewCount,
-            business.ParentBusinessId,
-            categories.Select(c => new CategoryDto(
-                c.Id,
-                c.Name,
-                c.Description,
-                c.ParentCategoryId
-            )).ToList(),
-            business.BusinessAddress,
-            business.Logo,
-            business.OpeningHours,
-            business.BusinessEmail,
-            business.BusinessPhoneNumber,
-            business.CacNumber,
-            business.AccessUsername,
-            business.AccessNumber,
-            business.SocialMediaLinks,
-            business.BusinessDescription,
-            business.Media,
-            business.IsVerified,
-            business.ReviewLink,
-            business.PreferredContactMethod,
-            business.Highlights,
-            business.Tags,
-            business.AverageResponseTime,
-            business.ProfileClicks,
-            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList()
-        );
-
-    }
 
     public async Task<BusinessDto> GetBusinessAsync(Guid id)
     {
@@ -112,7 +119,8 @@ public class BusinessService : IBusinessService
             business.Tags,
             business.AverageResponseTime,
             business.ProfileClicks,
-            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList()
+            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
+            business.QrCodeBase64
         );
     }
 
@@ -222,7 +230,8 @@ public class BusinessService : IBusinessService
             business.Tags,
             business.AverageResponseTime,
             business.ProfileClicks,
-            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList()
+            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
+            business.QrCodeBase64
         );
     }
 }

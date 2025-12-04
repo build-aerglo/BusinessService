@@ -54,7 +54,8 @@ public class BusinessControllerTests
             null,
             null,
             0,
-            new List<FaqDto>()
+            new List<FaqDto>(),
+            "BASE64_TEST_QR"   // NEW ARGUMENT ✔️
         );
     }
 
@@ -147,17 +148,14 @@ public class BusinessControllerTests
     [Test]
     public async Task UpdateBusiness_ShouldReturnNotFound_WhenBusinessNotFound()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
 
         _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
             .ThrowsAsync(new BusinessNotFoundException("Business not found."));
 
-        // Act
         var result = await _controller.UpdateBusiness(id, request);
 
-        // Assert
         var notFound = result as ObjectResult;
         notFound.Should().NotBeNull();
         notFound!.StatusCode.Should().Be(404);
@@ -167,17 +165,14 @@ public class BusinessControllerTests
     [Test]
     public async Task UpdateBusiness_ShouldReturnConflict_WhenBusinessConflict()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
 
         _serviceMock.Setup(s => s.UpdateBusinessAsync(id, request))
             .ThrowsAsync(new BusinessConflictException("Business conflict."));
 
-        // Act
         var result = await _controller.UpdateBusiness(id, request);
 
-        // Assert
         var conflict = result as ObjectResult;
         conflict.Should().NotBeNull();
         conflict!.StatusCode.Should().Be(409);

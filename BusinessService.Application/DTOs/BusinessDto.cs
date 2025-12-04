@@ -19,7 +19,7 @@ public record BusinessDto(
     string? AccessNumber,
     Dictionary<string, string>? SocialMediaLinks,
     string? BusinessDescription,
-    string[]? Media,
+    List<string>? Media,
     bool IsVerified,
     string? ReviewLink,
     string? PreferredContactMethod,
@@ -27,5 +27,6 @@ public record BusinessDto(
     string[]? Tags,
     string? AverageResponseTime,
     long ProfileClicks,
-    List<FaqDto>? Faqs
+    List<FaqDto>? Faqs,
+    string? QrCodeBase64
 );

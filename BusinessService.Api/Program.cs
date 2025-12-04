@@ -1,13 +1,18 @@
 using BusinessService.Api.BackgroundServices;
 using BusinessService.Application.Interfaces;
 using BusinessService.Application.Services;
+using BusinessService.Domain.Entities;
 using BusinessService.Domain.Repositories;
 using BusinessService.Infrastructure.Clients;
 using BusinessService.Infrastructure.Context;
 using BusinessService.Infrastructure.Repositories;
+using BusinessService.Infrastructure.Utility;
+using Dapper;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 // ---------------------------------------------------------------------
 // 1️⃣  Add services to the container
@@ -31,6 +36,11 @@ builder.Services.AddScoped<IBusinessSettingsRepository, BusinessSettingsReposito
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBusinessSettingsService, BusinessSettingsService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Faq>>());
+SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, object>>());
+SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());
+SqlMapper.AddTypeHandler(new JsonTypeHandler<List<string>>());
 
 
 // HTTP Client for UserService

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace BusinessService.Domain.Entities;
 
 public class Business
@@ -20,7 +22,7 @@ public class Business
     public string? AccessNumber { get; set; }
     public Dictionary<string, string>? SocialMediaLinks { get; set; }
     public string? BusinessDescription { get; set; }
-    public string[]? Media { get; set; }
+    public List<string>? Media { get; set; }
     public bool IsVerified { get; set; }
     public string? ReviewLink { get; set; }
     public string? PreferredContactMethod { get; set; }
@@ -29,6 +31,8 @@ public class Business
     public string? AverageResponseTime { get; set; }
     public long ProfileClicks { get; set; }
     public List<Faq>? Faqs { get; set; }
+    [Column("qr_code_base64")]
+    public string? QrCodeBase64 { get; set; }
 
     public List<Category> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
