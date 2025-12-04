@@ -1,15 +1,9 @@
-namespace BusinessService.Domain.Entities;
+namespace BusinessService.Application.DTOs;
 
-public class Business
+public class UpdateBusinessRequest
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = default!;
+    public string? Name { get; set; }
     public string? Website { get; set; }
-    public bool IsBranch { get; set; }
-    public decimal AvgRating { get; set; } = 0.00m;
-    public long ReviewCount { get; set; } = 0;
-    public Guid? ParentBusinessId { get; set; }
-    public Business? ParentBusiness { get; set; }
     public string? BusinessAddress { get; set; }
     public string? Logo { get; set; }
     public Dictionary<string, object>? OpeningHours { get; set; }
@@ -21,16 +15,12 @@ public class Business
     public Dictionary<string, string>? SocialMediaLinks { get; set; }
     public string? BusinessDescription { get; set; }
     public string[]? Media { get; set; }
-    public bool IsVerified { get; set; }
+    public bool? IsVerified { get; set; }
     public string? ReviewLink { get; set; }
     public string? PreferredContactMethod { get; set; }
     public string[]? Highlights { get; set; }
     public string[]? Tags { get; set; }
     public string? AverageResponseTime { get; set; }
-    public long ProfileClicks { get; set; }
-    public List<Faq>? Faqs { get; set; }
-
-    public List<Category> Categories { get; set; } = new();
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public long? ProfileClicks { get; set; }
+    public List<FaqDto>? Faqs { get; set; }
 }
