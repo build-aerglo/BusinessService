@@ -44,8 +44,9 @@ public class BusinessService : IBusinessService
     };
 
     // *** Generate the QR code content ***
-    string qrContent = $"https://yourdomain.com/business/{business.Id}";
+    string qrContent = $"https://clereview.com/business/{business.Id}";
     business.QrCodeBase64 = _qrCodeService.GenerateQrCodeBase64(qrContent);
+    business.ReviewLink = qrContent;
 
     await _repository.AddAsync(business);
 
@@ -179,7 +180,6 @@ public class BusinessService : IBusinessService
         {
             business.IsVerified = request.IsVerified.Value;
         }
-        business.ReviewLink = request.ReviewLink ?? business.ReviewLink;
         business.PreferredContactMethod = request.PreferredContactMethod ?? business.PreferredContactMethod;
         business.Highlights = request.Highlights ?? business.Highlights;
         business.Tags = request.Tags ?? business.Tags;

@@ -218,7 +218,6 @@ public async Task AddAsync(Business business)
             business_description = @BusinessDescription,
             media = CAST(@Media AS JSONB),
             is_verified = @IsVerified,
-            review_link = @ReviewLink,
             preferred_contact_method = @PreferredContactMethod,
             highlights = CAST(@Highlights AS JSONB),
             tags = CAST(@Tags AS JSONB),
