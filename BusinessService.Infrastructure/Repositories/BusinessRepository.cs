@@ -200,7 +200,7 @@ public async Task AddAsync(Business business)
         await conn.ExecuteAsync(sql, business);
     }
 
-    public async Task UpdateProfileAsync(Business business)
+public async Task UpdateProfileAsync(Business business)
 {
     const string sql = """
         UPDATE business
@@ -218,9 +218,13 @@ public async Task AddAsync(Business business)
             business_description = @BusinessDescription,
             media = CAST(@Media AS JSONB),
             is_verified = @IsVerified,
+            review_link = @ReviewLink,
             preferred_contact_method = @PreferredContactMethod,
-            highlights = CAST(@Highlights AS JSONB),
-            tags = CAST(@Tags AS JSONB),
+
+            -- FIXED: text[] should not be JSONB
+            highlights = @Highlights,
+            tags = @Tags,
+
             average_response_time = @AverageResponseTime,
             profile_clicks = @ProfileClicks,
             faqs = CAST(@Faqs AS JSONB),
@@ -229,7 +233,6 @@ public async Task AddAsync(Business business)
     """;
 
     using var conn = _context.CreateConnection();
-
     await conn.ExecuteAsync(sql, new
     {
         business.Id,
@@ -238,7 +241,6 @@ public async Task AddAsync(Business business)
         business.BusinessAddress,
         business.Logo,
 
-        // JSONB fields — always serialize before casting
         OpeningHours = business.OpeningHours != null
             ? JsonConvert.SerializeObject(business.OpeningHours)
             : null,
@@ -263,13 +265,9 @@ public async Task AddAsync(Business business)
         business.ReviewLink,
         business.PreferredContactMethod,
 
-        Highlights = business.Highlights != null
-            ? JsonConvert.SerializeObject(business.Highlights)
-            : null,
-
-        Tags = business.Tags != null
-            ? JsonConvert.SerializeObject(business.Tags)
-            : null,
+        // FIXED — send string[] directly
+        Highlights = business.Highlights,
+        Tags = business.Tags,
 
         business.AverageResponseTime,
         business.ProfileClicks,
@@ -281,7 +279,6 @@ public async Task AddAsync(Business business)
         business.UpdatedAt
     });
 }
-
 
 
     public async Task<List<Business>> GetBranchesAsync(Guid parentId)
