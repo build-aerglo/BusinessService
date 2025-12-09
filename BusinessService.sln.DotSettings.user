@@ -2,5 +2,8 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AControllerBase_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2024_002E2_003Fresharper_002Dhost_003FSourcesCache_003Fc7afd9724cf757c4a8469dba2bdc22ab5ac111c91f431dbfefc992dacb3e8635_003FControllerBase_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AServiceProvider_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003FLibrary_003FApplication_0020Support_003FJetBrains_003FRider2024_002E2_003Fresharper_002Dhost_003FSourcesCache_003Fce37be1a06b16c6faa02038d2cc477dd3bca5b217ceeb41c5f2ad45c1bf9_003FServiceProvider_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=327f6193_002De565_002D420e_002D87b5_002D49b56d985d98/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from &amp;lt;tests&amp;gt;\&amp;lt;BusinessService.Api.Tests&amp;gt;" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
-  &lt;Project Location="C:\Users\oseah\Desktop\PROGRAM\AERGLO\REVIEW_SERVICE\BusinessService\BusinessService.Infrastructure.Tests" Presentation="&amp;lt;tests&amp;gt;\&amp;lt;BusinessService.Infrastructure.Tests&amp;gt;" /&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::BD80C252-A197-44D4-B5B1-B088CBEC0E0F::net9.0::BusinessService.Api.Tests.Controllers.TagControllerTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::0C02E538-790D-40FE-8D29-ADF9FD071742::net9.0::BusinessService.Application.Tests.Services.TagServiceTests&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
