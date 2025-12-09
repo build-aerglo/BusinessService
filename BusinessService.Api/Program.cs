@@ -31,12 +31,14 @@ builder.Services.AddSingleton<DapperContext>();
 builder.Services.AddScoped<IBusinessRepository, BusinessRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IBusinessSettingsRepository, BusinessSettingsRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 // Register application services (application layer)
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBusinessSettingsService, BusinessSettingsService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+builder.Services.AddScoped<ITagService, TagService>();
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Faq>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, object>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());
