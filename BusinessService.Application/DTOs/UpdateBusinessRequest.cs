@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace BusinessService.Application.DTOs;
 
 public class UpdateBusinessRequest
@@ -23,4 +25,7 @@ public class UpdateBusinessRequest
     public string? AverageResponseTime { get; set; }
     public long? ProfileClicks { get; set; }
     public List<FaqDto>? Faqs { get; set; }
+    [Required, MinLength(1, ErrorMessage = "At least one category must be specified")]
+    public required List<Guid> CategoryIds { get; set; }
+
 }

@@ -186,6 +186,22 @@ public class BusinessService : IBusinessService
     {
         var business = await _repository.FindByIdAsync(id)
             ?? throw new BusinessNotFoundException($"Business {id} not found.");
+        
+        
+        if (request.CategoryIds != null && request.CategoryIds.Count > 0)
+        {
+            var categories = await _categoryRepository.FindAllByIdsAsync(request.CategoryIds);
+
+            if (categories.Count != request.CategoryIds.Count)
+            {
+                var invalidIds = request.CategoryIds.Except(categories.Select(c => c.Id));
+                throw new CategoryNotFoundException(
+                    "Invalid category IDs: " + string.Join(", ", invalidIds)
+                );
+            }
+
+            business.Categories = categories; // Now contains all valid categories
+        }
 
         business.Name = request.Name ?? business.Name;
         business.Website = request.Website ?? business.Website;

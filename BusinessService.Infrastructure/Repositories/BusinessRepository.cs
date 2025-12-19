@@ -1,4 +1,5 @@
 using BusinessService.Domain.Entities;
+using BusinessService.Domain.Exceptions;
 using BusinessService.Domain.Repositories;
 using BusinessService.Infrastructure.Context;
 using Dapper;
@@ -202,6 +203,30 @@ public async Task AddAsync(Business business)
 
 public async Task UpdateProfileAsync(Business business)
 {
+    using var conn = _context.CreateConnection();
+     conn.Open();
+    using var tx = conn.BeginTransaction();
+
+    if (business.Categories != null && business.Categories.Count > 0)
+    {
+        var categoryIds = business.Categories.Select(c => c.Id).ToArray();
+
+        const string validateSql = """
+                                       SELECT id FROM category 
+                                       WHERE id = ANY(@Ids);
+                                   """;
+
+        var existing = await conn.QueryAsync<Guid>(validateSql, new { Ids = categoryIds }, tx);
+
+        if (existing.Count() != categoryIds.Length)
+        {
+            var missing = categoryIds.Except(existing).ToList();
+            throw new CategoryNotFoundException(
+                $"Invalid category IDs: {string.Join(", ", missing)}"
+            );
+        }
+    }
+    
     const string sql = """
         UPDATE business
         SET name = @Name,
@@ -232,7 +257,6 @@ public async Task UpdateProfileAsync(Business business)
         WHERE id = @Id;
     """;
 
-    using var conn = _context.CreateConnection();
     await conn.ExecuteAsync(sql, new
     {
         business.Id,
@@ -274,7 +298,34 @@ public async Task UpdateProfileAsync(Business business)
             : null,
 
         business.UpdatedAt
-    });
+    },tx);
+    
+    //
+    // 3️⃣ UPDATE CATEGORY MAPPINGS
+    //
+    const string deleteCatSql = """
+                                    DELETE FROM business_category WHERE business_id = @BusinessId;
+                                """;
+
+    await conn.ExecuteAsync(deleteCatSql, new { BusinessId = business.Id }, tx);
+
+    if (business.Categories.Any())
+    {
+        const string insertCatSql = """
+                                        INSERT INTO business_category (business_id, category_id)
+                                        VALUES (@BusinessId, @CategoryId);
+                                    """;
+
+        var rows = business.Categories.Select(c => new
+        {
+            BusinessId = business.Id,
+            CategoryId = c.Id
+        });
+
+        await conn.ExecuteAsync(insertCatSql, rows, tx);
+    }
+
+    tx.Commit();
 }
 
 
