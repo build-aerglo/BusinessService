@@ -14,7 +14,8 @@ public class Business
     public Business? ParentBusiness { get; set; }
     public string? BusinessAddress { get; set; }
     public string? Logo { get; set; }
-    public Dictionary<string, object>? OpeningHours { get; set; }
+    [Column(TypeName = "text")]
+    public string? OpeningHours { get; set; }
     public string? BusinessEmail { get; set; }
     public string? BusinessPhoneNumber { get; set; }
     public string? CacNumber { get; set; }

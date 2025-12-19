@@ -40,7 +40,6 @@ builder.Services.AddScoped<IBusinessSettingsService, BusinessSettingsService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<ITagService, TagService>();
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Faq>>());
-SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, object>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<string>>());
 

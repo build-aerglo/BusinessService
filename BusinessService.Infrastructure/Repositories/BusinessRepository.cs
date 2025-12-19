@@ -66,7 +66,7 @@ public async Task AddAsync(Business business)
             @ParentBusinessId,
             @BusinessAddress,
             @Logo,
-            CAST(@OpeningHours AS JSONB),
+            @OpeningHours,
             @BusinessEmail,
             @BusinessPhoneNumber,
             @CacNumber,
@@ -241,10 +241,7 @@ public async Task UpdateProfileAsync(Business business)
         business.BusinessAddress,
         business.Logo,
 
-        OpeningHours = business.OpeningHours != null
-            ? JsonConvert.SerializeObject(business.OpeningHours)
-            : null,
-
+        OpeningHours = business.OpeningHours,
         business.BusinessEmail,
         business.BusinessPhoneNumber,
         business.CacNumber,

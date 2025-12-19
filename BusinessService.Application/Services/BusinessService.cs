@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BusinessService.Application.DTOs;
 using BusinessService.Application.Interfaces;
 using BusinessService.Domain.Entities;
@@ -24,6 +25,11 @@ public class BusinessService : IBusinessService
     
     private static BusinessDto MapToDto(Business business)
     {
+        Dictionary<string, string>? openingHours = null;
+        if (!string.IsNullOrWhiteSpace(business.OpeningHours))
+        {
+            openingHours = JsonSerializer.Deserialize<Dictionary<string, string>>(business.OpeningHours);
+        }
         return new BusinessDto(
             business.Id,
             business.Name,
@@ -40,7 +46,7 @@ public class BusinessService : IBusinessService
             )).ToList(),
             business.BusinessAddress,
             business.Logo,
-            business.OpeningHours,
+            openingHours,
             business.BusinessEmail,
             business.BusinessPhoneNumber,
             business.CacNumber,
@@ -102,6 +108,14 @@ public class BusinessService : IBusinessService
     {
         var business = await _repository.FindByIdAsync(id)
             ?? throw new BusinessNotFoundException($"Business {id} not found.");
+        
+        // Deserialize opening hours ONLY for API output
+        Dictionary<string, string>? openingHours = null;
+        if (!string.IsNullOrWhiteSpace(business.OpeningHours))
+        {
+            openingHours = JsonSerializer.Deserialize<Dictionary<string, string>>(business.OpeningHours);
+        }
+
 
         return new BusinessDto(
             business.Id,
@@ -114,7 +128,7 @@ public class BusinessService : IBusinessService
             business.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
             business.BusinessAddress,
             business.Logo,
-            business.OpeningHours,
+            openingHours,
             business.BusinessEmail,
             business.BusinessPhoneNumber,
             business.CacNumber,
@@ -177,7 +191,10 @@ public class BusinessService : IBusinessService
         business.Website = request.Website ?? business.Website;
         business.BusinessAddress = request.BusinessAddress ?? business.BusinessAddress;
         business.Logo = request.Logo ?? business.Logo;
-        business.OpeningHours = request.OpeningHours ?? business.OpeningHours;
+        if (request.OpeningHours is not null)
+        {
+            business.OpeningHours = JsonSerializer.Serialize(request.OpeningHours);
+        }
         business.BusinessEmail = request.BusinessEmail ?? business.BusinessEmail;
         business.BusinessPhoneNumber = request.BusinessPhoneNumber ?? business.BusinessPhoneNumber;
         business.CacNumber = request.CacNumber ?? business.CacNumber;

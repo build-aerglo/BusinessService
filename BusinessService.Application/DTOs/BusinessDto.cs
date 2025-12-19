@@ -11,7 +11,7 @@ public record BusinessDto(
     List<CategoryDto> Categories,
     string? BusinessAddress,
     string? Logo,
-    Dictionary<string, object>? OpeningHours,
+    Dictionary<string, string>? OpeningHours,
     string? BusinessEmail,
     string? BusinessPhoneNumber,
     string? CacNumber,
