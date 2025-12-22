@@ -336,4 +336,33 @@ public async Task UpdateProfileAsync(Business business)
         var results = await conn.QueryAsync<Business>(sql, new { parentId });
         return results.ToList();
     }
+    
+    public async Task<List<Business>> GetBusinessesByCategoryAsync(Guid categoryId)
+    {
+        const string sql = """
+                               SELECT b.*
+                               FROM business b
+                               INNER JOIN business_category bc ON bc.business_id = b.id
+                               WHERE bc.category_id = @categoryId;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        var results = await conn.QueryAsync<Business>(sql, new { categoryId });
+        return results.ToList();
+    }
+
+    public async Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId)
+    {
+        const string sql = """
+                               SELECT b.*
+                               FROM business b
+                               JOIN business_category bc ON bc.business_id = b.id
+                               WHERE bc.category_id = @categoryId;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        var businesses = await conn.QueryAsync<Business>(sql, new { categoryId });
+        return businesses.ToList();
+    }
+
 }

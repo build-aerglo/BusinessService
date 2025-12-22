@@ -14,13 +14,15 @@ public class BusinessService : IBusinessService
     private readonly ICategoryRepository _categoryRepository;
     private readonly IQrCodeService _qrCodeService;
     private readonly IBusinessSearchProducer _searchProducer;
+    private readonly ITagRepository _tagRepository;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
         _qrCodeService = qrCodeService;
         _searchProducer = searchProducer;
+        _tagRepository = tagRepository;
     }
     
     private static BusinessDto MapToDto(Business business)
@@ -218,7 +220,7 @@ public class BusinessService : IBusinessService
         business.AccessNumber = request.AccessNumber ?? business.AccessNumber;
         business.SocialMediaLinks = request.SocialMediaLinks ?? business.SocialMediaLinks;
         business.BusinessDescription = request.BusinessDescription ?? business.BusinessDescription;
-        business.Media = request.Media ?? business.Media;
+        business.Media = business.Media;
         if (request.IsVerified.HasValue)
         {
             business.IsVerified = request.IsVerified.Value;
@@ -252,5 +254,93 @@ public class BusinessService : IBusinessService
 
         return dto;
     }
+    
+    public async Task<List<BusinessSummaryDto>> GetBusinessesByCategoryAsync(Guid categoryId)
+    {
+        // validate category exists
+        var category = await _categoryRepository.FindByIdAsync(categoryId);
+        if (category == null)
+            throw new CategoryNotFoundException($"Category {categoryId} does not exist.");
+
+        var businesses = await _repository.GetBusinessesByCategoryAsync(categoryId);
+
+        return businesses.Select(b => new BusinessSummaryDto(
+            b.Id,
+            b.Name,
+            b.AvgRating,
+            b.ReviewCount,
+            b.IsBranch,
+            b.ParentBusinessId
+        )).ToList();
+    }
+    public async Task<List<BusinessDto>> GetBusinessesByTagAsync(Guid tagId)
+    {
+        // 1. Get the tag → find its category
+        var tag = await _tagRepository.FindByIdAsync(tagId);
+        if (tag == null)
+            throw new TagNotFoundException($"Tag {tagId} not found.");
+
+        var categoryId = tag.CategoryId;
+
+        // 2. Fetch businesses assigned to this category
+        var businesses = await _repository.GetBusinessesByCategoryIdAsync(categoryId);
+
+        // 3. Map to DTOs
+        return businesses.Select(b => new BusinessDto(
+            b.Id,
+            b.Name,
+            b.Website,
+            b.IsBranch,
+            b.AvgRating,
+            b.ReviewCount,
+            b.ParentBusinessId,
+            b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
+            b.BusinessAddress,
+            b.Logo,
+            DeserializeOpeningHours(b.OpeningHours),
+            b.BusinessEmail,
+            b.BusinessPhoneNumber,
+            b.CacNumber,
+            b.AccessUsername,
+            b.AccessNumber,
+            b.SocialMediaLinks,
+            b.BusinessDescription,
+            b.Media,
+            b.IsVerified,
+            b.ReviewLink,
+            b.PreferredContactMethod,
+            b.Highlights,
+            b.Tags,
+            b.AverageResponseTime,
+            b.ProfileClicks,
+            b.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
+            b.QrCodeBase64
+        )).ToList();
+    }
+
+    private static Dictionary<string, string>? DeserializeOpeningHours(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+
+        var result = new Dictionary<string, string>();
+
+        using var doc = JsonDocument.Parse(json);
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (prop.Value.ValueKind == JsonValueKind.String)
+            {
+                result[prop.Name] = prop.Value.GetString()!;
+            }
+            else
+            {
+                // convert objects, arrays, null, numbers, booleans to string
+                result[prop.Name] = prop.Value.ToString();
+            }
+        }
+
+        return result;
+    }
+
 }
 

@@ -108,4 +108,43 @@ public class CategoryControllerTests
         ok!.StatusCode.Should().Be(200);
         ok.Value.Should().BeEquivalentTo(list);
     }
+    
+    [Test]
+    public async Task GetAllCategories_ShouldReturnOk_WithCategoryList()
+    {
+        // Arrange
+        var expected = new List<CategoryDto>
+        {
+            new CategoryDto(Guid.NewGuid(), "Shopping", "All shopping stores", null),
+            new CategoryDto(Guid.NewGuid(), "Food", "Restaurants and cafes", null)
+        };
+
+        _serviceMock
+            .Setup(s => s.GetAllCategoriesAsync())
+            .ReturnsAsync(expected);
+
+        // Act
+        var result = await _controller.GetAllCategories();
+
+        // Assert
+        var ok = result as OkObjectResult;
+        ok.Should().NotBeNull();
+        ok!.StatusCode.Should().Be(200);
+        ok.Value.Should().BeEquivalentTo(expected);
+    }
+    [Test]
+    public async Task GetAllCategories_ShouldReturnOk_WithEmptyList_WhenNoCategories()
+    {
+        _serviceMock
+            .Setup(s => s.GetAllCategoriesAsync())
+            .ReturnsAsync(new List<CategoryDto>());
+
+        var result = await _controller.GetAllCategories();
+
+        var ok = result as OkObjectResult;
+        ok.Should().NotBeNull();
+        ok!.StatusCode.Should().Be(200);
+        ((List<CategoryDto>)ok.Value!).Should().BeEmpty();
+    }
+
 }

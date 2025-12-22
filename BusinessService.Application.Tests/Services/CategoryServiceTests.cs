@@ -102,4 +102,47 @@ public class CategoryServiceTests
         result.Should().HaveCount(2);
         result.Select(c => c.Name).Should().Contain(new[] { "Food", "Drinks" });
     }
+    
+    [Test]
+    public async Task GetCategoryTags_ShouldReturnCategoryWithTags_WhenCategoryExists()
+    {
+        // Arrange
+        var categoryId = Guid.NewGuid();
+
+        _repoMock.Setup(r => r.FindByIdAsync(categoryId))
+            .ReturnsAsync(new Category
+            {
+                Id = categoryId,
+                Name = "Shopping"
+            });
+
+        _repoMock.Setup(r => r.GetTagsByCategoryIdAsync(categoryId))
+            .ReturnsAsync(new List<Tags>
+            {
+                new Tags { Id = Guid.NewGuid(), CategoryId = categoryId, Name = "electronics" },
+                new Tags { Id = Guid.NewGuid(), CategoryId = categoryId, Name = "clothing" }
+            });
+
+        // Act
+        var result = await _service.GetCategoryTagsAsync(categoryId);
+
+        // Assert
+        result.CategoryName.Should().Be("Shopping");
+        result.Tags.Should().HaveCount(2);
+        result.Tags.Select(t => t.Name).Should().Contain(new [] { "electronics", "clothing" });
+    }
+
+    [Test]
+    public void GetCategoryTags_ShouldThrowNotFound_WhenCategoryDoesNotExist()
+    {
+        var categoryId = Guid.NewGuid();
+
+        _repoMock.Setup(r => r.FindByIdAsync(categoryId))
+            .ReturnsAsync((Category?)null);
+
+        var act = async () => await _service.GetCategoryTagsAsync(categoryId);
+
+        act.Should().ThrowAsync<CategoryNotFoundException>()
+            .WithMessage("Category not found.");
+    }
 }

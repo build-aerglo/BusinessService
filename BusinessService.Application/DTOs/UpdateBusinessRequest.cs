@@ -16,16 +16,23 @@ public class UpdateBusinessRequest
     public string? AccessNumber { get; set; }
     public Dictionary<string, string>? SocialMediaLinks { get; set; }
     public string? BusinessDescription { get; set; }
-    public List<string>? Media { get; set; }
+
+    // FIXED: Must be string[]?
+    public string[]? Media { get; set; }
+
     public bool? IsVerified { get; set; }
     public string? ReviewLink { get; set; }
     public string? PreferredContactMethod { get; set; }
+
     public string[]? Highlights { get; set; }
     public string[]? Tags { get; set; }
+
     public string? AverageResponseTime { get; set; }
     public long? ProfileClicks { get; set; }
-    public List<FaqDto>? Faqs { get; set; }
-    [Required, MinLength(1, ErrorMessage = "At least one category must be specified")]
-    public required List<Guid> CategoryIds { get; set; }
 
+    // FIXED: Should use FaqRequestDto
+    public List<FaqDto>? Faqs { get; set; }
+
+    // FIXED: Nullable for PATCH, validated only if provided
+    public List<Guid>? CategoryIds { get; set; }
 }

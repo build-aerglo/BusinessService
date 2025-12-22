@@ -178,4 +178,67 @@ public class BusinessControllerTests
         conflict!.StatusCode.Should().Be(409);
         conflict.Value.Should().BeEquivalentTo(new { error = "Business conflict." });
     }
+    
+    [Test]
+    public async Task GetBusinessesByCategory_ShouldReturnOk_WhenBusinessesExist()
+    {
+        var categoryId = Guid.NewGuid();
+
+        var expected = new List<BusinessSummaryDto>
+        {
+            new BusinessSummaryDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null),
+            new BusinessSummaryDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null)
+        };
+
+        _serviceMock
+            .Setup(s => s.GetBusinessesByCategoryAsync(categoryId))
+            .ReturnsAsync(expected);
+
+        var result = await _controller.GetBusinessesByCategory(categoryId);
+
+        var ok = result as OkObjectResult;
+        ok.Should().NotBeNull();
+        ok!.StatusCode.Should().Be(200);
+
+        ok.Value.Should().BeEquivalentTo(expected);
+    }
+
+    [Test]
+    public async Task GetBusinessesByCategory_ShouldReturnNotFound_WhenCategoryDoesNotExist()
+    {
+        var categoryId = Guid.NewGuid();
+
+        _serviceMock
+            .Setup(s => s.GetBusinessesByCategoryAsync(categoryId))
+            .ThrowsAsync(new CategoryNotFoundException("Category not found."));
+
+        var result = await _controller.GetBusinessesByCategory(categoryId);
+
+        var notFound = result as ObjectResult;
+        notFound.Should().NotBeNull();
+        notFound!.StatusCode.Should().Be(404);
+
+        notFound.Value.Should().BeEquivalentTo(new { error = "Category not found." });
+    }
+    [Test]
+    public async Task GetBusinessesByCategory_ShouldReturnOk_WithEmptyList_WhenNoBusinessesMatch()
+    {
+        var categoryId = Guid.NewGuid();
+
+        var expected = new List<BusinessSummaryDto>();
+
+        _serviceMock
+            .Setup(s => s.GetBusinessesByCategoryAsync(categoryId))
+            .ReturnsAsync(expected);
+
+        var result = await _controller.GetBusinessesByCategory(categoryId);
+
+        var ok = result as OkObjectResult;
+        ok.Should().NotBeNull();
+        ok!.StatusCode.Should().Be(200);
+
+        var response = ok.Value as List<BusinessSummaryDto>;
+        response.Should().NotBeNull();
+        response!.Count.Should().Be(0);
+    }
 }

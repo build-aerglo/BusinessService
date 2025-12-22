@@ -8,4 +8,7 @@ public interface ICategoryService
     Task<List<CategoryDto>> GetAllTopLevelCategoriesAsync();
     Task<CategoryDto> GetCategoryAsync(Guid id);
     Task<List<CategoryDto>> GetSubCategoriesAsync(Guid parentId);
+    Task<CategoryTagsDto> GetCategoryTagsAsync(Guid categoryId);
+    Task<List<CategoryDto>> GetAllCategoriesAsync();
+    Task<List<CategoryTagsDto>> GetAllCategoriesWithTagsAsync();
 }

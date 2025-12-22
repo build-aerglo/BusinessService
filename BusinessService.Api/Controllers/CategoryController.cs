@@ -87,4 +87,32 @@ public class CategoryController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+    
+    [HttpGet("{categoryId:guid}/tags")]
+    public async Task<IActionResult> GetCategoryTags(Guid categoryId)
+    {
+        try
+        {
+            var result = await _service.GetCategoryTagsAsync(categoryId);
+            return Ok(result);
+        }
+        catch (CategoryNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> GetAllCategories()
+    {
+        var categories = await _service.GetAllCategoriesAsync();
+        return Ok(categories);
+    }
+    
+    [HttpGet("with-tags")]
+    public async Task<IActionResult> GetAllCategoriesWithTags()
+    {
+        var categories = await _service.GetAllCategoriesWithTagsAsync();
+        return Ok(categories);
+    }
 }

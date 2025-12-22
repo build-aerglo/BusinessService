@@ -81,4 +81,32 @@ public class CategoryRepository : ICategoryRepository
         var rows = await conn.QueryAsync<Category>(sql, new { parentId });
         return rows.ToList();
     }
+    
+    public async Task<List<Tags>> GetTagsByCategoryIdAsync(Guid categoryId)
+    {
+        const string sql = """
+                               SELECT 
+                                   id AS Id,
+                                   category_id AS CategoryId,
+                                   name AS Name
+                               FROM category_tags
+                               WHERE category_id = @categoryId
+                               ORDER BY name;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        var tags = await conn.QueryAsync<Tags>(sql, new { categoryId });
+
+        return tags.ToList();
+    }
+    
+    public async Task<List<Category>> GetAllCategoriesAsync()
+    {
+        const string sql = "SELECT * FROM category ORDER BY name;";
+
+        using var conn = _context.CreateConnection();
+        var categories = await conn.QueryAsync<Category>(sql);
+        return categories.ToList();
+    }
+
 }

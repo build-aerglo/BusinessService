@@ -6,7 +6,6 @@ using BusinessService.Domain.Repositories;
 
 namespace BusinessService.Application.Services;
 
-
 public class CategoryService : ICategoryService
 {
     private readonly ICategoryRepository _repository;
@@ -18,7 +17,6 @@ public class CategoryService : ICategoryService
 
     public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequest request)
     {
-        // Check if name already exists (case-insensitive)
         var exists = await _repository.ExistsByNameAsync(request.Name);
         if (exists)
             throw new CategoryAlreadyExistsException($"Category name '{request.Name}' already exists.");
@@ -82,4 +80,64 @@ public class CategoryService : ICategoryService
             .Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId))
             .ToList();
     }
+
+    public async Task<CategoryTagsDto> GetCategoryTagsAsync(Guid categoryId)
+    {
+        var category = await _repository.FindByIdAsync(categoryId);
+
+        if (category == null)
+            throw new CategoryNotFoundException("Category not found.");
+
+        // Fetch domain entities
+        var domainTags = await _repository.GetTagsByCategoryIdAsync(categoryId);
+
+        // Map domain → DTO
+        var tagDtos = domainTags.Select(t => new TagDto(
+            t.Id,
+            t.CategoryId,
+            t.Name
+        )).ToList();
+
+        return new CategoryTagsDto(
+            category.Id,
+            category.Name,
+            tagDtos
+        );
+    }
+    
+    public async Task<List<CategoryDto>> GetAllCategoriesAsync()
+    {
+        var categories = await _repository.GetAllCategoriesAsync();
+
+        return categories
+            .Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId))
+            .ToList();
+    }
+
+    public async Task<List<CategoryTagsDto>> GetAllCategoriesWithTagsAsync()
+    {
+        var categories = await _repository.GetAllCategoriesAsync();
+
+        var result = new List<CategoryTagsDto>();
+
+        foreach (var category in categories)
+        {
+            var domainTags = await _repository.GetTagsByCategoryIdAsync(category.Id);
+
+            var tagDtos = domainTags.Select(t => new TagDto(
+                t.Id,
+                t.CategoryId,
+                t.Name
+            )).ToList();
+
+            result.Add(new CategoryTagsDto(
+                category.Id,
+                category.Name,
+                tagDtos
+            ));
+        }
+
+        return result;
+    }
+
 }

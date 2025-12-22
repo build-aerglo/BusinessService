@@ -14,4 +14,7 @@ public interface ICategoryRepository
     Task AddAsync(Category category);
     Task<List<Category>> FindTopLevelAsync();
     Task<List<Category>> FindSubCategoriesAsync(Guid parentId);
+    Task<List<Tags>> GetTagsByCategoryIdAsync(Guid categoryId);
+    Task<List<Category>> GetAllCategoriesAsync();
+    
 }

@@ -99,4 +99,18 @@ public class BusinessController : ControllerBase
             return Conflict(new { error = ex.Message });
         }
     }
+    
+    [HttpGet("category/{categoryId}")]
+    public async Task<IActionResult> GetBusinessesByCategory(Guid categoryId)
+    {
+        var results = await _service.GetBusinessesByCategoryAsync(categoryId);
+        return Ok(results);
+    }
+    
+    [HttpGet("by-tag/{tagId:guid}")]
+    public async Task<IActionResult> GetBusinessesByTag(Guid tagId)
+    {
+        var businesses = await _service.GetBusinessesByTagAsync(tagId);
+        return Ok(businesses);
+    }
 }

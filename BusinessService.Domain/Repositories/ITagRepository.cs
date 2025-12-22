@@ -11,4 +11,5 @@ public interface ITagRepository
     
     Task<bool> DeleteBusinessTagsAsync(Guid id);
     Task AddBusinessTagAsync(Guid id, Guid businessId);
+    
 }

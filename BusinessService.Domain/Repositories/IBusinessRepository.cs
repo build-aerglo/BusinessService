@@ -10,4 +10,6 @@ public interface IBusinessRepository
     Task UpdateRatingsAsync(Business business);
     Task UpdateProfileAsync(Business business);
     Task<List<Business>> GetBranchesAsync(Guid parentId);
+    Task<List<Business>> GetBusinessesByCategoryAsync(Guid categoryId);
+    Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId);
 }

@@ -19,7 +19,8 @@ public class BusinessServiceTests
     private Mock<IQrCodeService> _qrCodeServiceMock = null!;
     private Mock<IBusinessSearchProducer> _searchProducerMock = null!;
     private Application.Services.BusinessService _service = null!;
-
+    private Mock<ITagRepository> _tagRepoMock = null!;
+    
     [SetUp]
     public void Setup()
     {
@@ -27,6 +28,7 @@ public class BusinessServiceTests
         _categoryRepoMock = new Mock<ICategoryRepository>();
         _qrCodeServiceMock = new Mock<IQrCodeService>();
         _searchProducerMock = new Mock<IBusinessSearchProducer>();
+        _tagRepoMock = new Mock<ITagRepository>();
 
         // Always return a fixed Base64 encoded QR code for predictable tests
         _qrCodeServiceMock.Setup(q => q.GenerateQrCodeBase64(It.IsAny<string>()))
@@ -36,7 +38,8 @@ public class BusinessServiceTests
             _businessRepoMock.Object,
             _categoryRepoMock.Object,
             _qrCodeServiceMock.Object,
-            _searchProducerMock.Object
+            _searchProducerMock.Object,
+            _tagRepoMock.Object
         );
     }
 
@@ -171,4 +174,83 @@ public class BusinessServiceTests
         act.Should().ThrowAsync<BusinessConflictException>()
             .WithMessage("The provided business email or access username is already in use.");
     }
+    
+    [Test]
+    public void GetBusinessesByCategory_ShouldThrow_WhenCategoryDoesNotExist()
+    {
+        var categoryId = Guid.NewGuid();
+
+        _categoryRepoMock
+            .Setup(r => r.FindByIdAsync(categoryId))
+            .ReturnsAsync((Category?)null);
+
+        Assert.ThrowsAsync<CategoryNotFoundException>(() =>
+            _service.GetBusinessesByCategoryAsync(categoryId));
+    }
+
+    [Test]
+    public async Task GetBusinessesByCategory_ShouldReturnBusinesses_WhenCategoryExists()
+    {
+        var categoryId = Guid.NewGuid();
+
+        _categoryRepoMock
+            .Setup(r => r.FindByIdAsync(categoryId))
+            .ReturnsAsync(new Category
+            {
+                Id = categoryId,
+                Name = "Repairs"
+            });
+
+        _businessRepoMock
+            .Setup(r => r.GetBusinessesByCategoryAsync(categoryId))
+            .ReturnsAsync(new List<Business>
+            {
+                new Business
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "FixIt Hub",
+                    AvgRating = 4.2m,
+                    ReviewCount = 120
+                },
+                new Business
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Acme Repair Co",
+                    AvgRating = 4.7m,
+                    ReviewCount = 300
+                }
+            });
+
+        var result = await _service.GetBusinessesByCategoryAsync(categoryId);
+
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+
+        result[0].Name.Should().Be("FixIt Hub");
+        result[1].AvgRating.Should().Be(4.7m);
+    }
+
+    [Test]
+    public async Task GetBusinessesByCategory_ShouldReturnEmptyList_WhenNoBusinessesFound()
+    {
+        var categoryId = Guid.NewGuid();
+
+        _categoryRepoMock
+            .Setup(r => r.FindByIdAsync(categoryId))
+            .ReturnsAsync(new Category
+            {
+                Id = categoryId,
+                Name = "Repairs"
+            });
+
+        _businessRepoMock
+            .Setup(r => r.GetBusinessesByCategoryAsync(categoryId))
+            .ReturnsAsync(new List<Business>());
+
+        var result = await _service.GetBusinessesByCategoryAsync(categoryId);
+
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
 }
