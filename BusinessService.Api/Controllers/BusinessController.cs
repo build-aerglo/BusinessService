@@ -103,8 +103,16 @@ public class BusinessController : ControllerBase
     [HttpGet("category/{categoryId}")]
     public async Task<IActionResult> GetBusinessesByCategory(Guid categoryId)
     {
-        var results = await _service.GetBusinessesByCategoryAsync(categoryId);
-        return Ok(results);
+        try
+        {
+            var results = await _service.GetBusinessesByCategoryAsync(categoryId);
+            return Ok(results);
+        }
+        catch (CategoryNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Category not found: {Message}", ex.Message);
+            return NotFound(new { error = ex.Message });
+        }
     }
     
     [HttpGet("by-tag/{tagId:guid}")]
@@ -112,5 +120,28 @@ public class BusinessController : ControllerBase
     {
         var businesses = await _service.GetBusinessesByTagAsync(tagId);
         return Ok(businesses);
+    }
+    
+    /// <summary>
+    /// Create a business claim.
+    /// </summary>
+    [HttpPost("claim-business")]
+    public async Task<IActionResult> ClaimBusiness(BusinessClaimsDto dto)
+    {
+        try
+        {
+            await _service.ClaimBusinessAsync(dto);
+            return Ok();
+        }
+        catch (BusinessNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Business not found: {Message}", ex.Message);
+            return NotFound(new { error = ex.Message });
+        }
+        catch (BusinessConflictException ex)
+        {
+            _logger.LogWarning(ex, "Business conflict during claim: {Message}", ex.Message);
+            return Conflict(new { error = ex.Message });
+        }
     }
 }

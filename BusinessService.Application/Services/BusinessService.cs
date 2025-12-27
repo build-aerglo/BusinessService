@@ -65,7 +65,8 @@ public class BusinessService : IBusinessService
             business.AverageResponseTime,
             business.ProfileClicks,
             business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
-            business.QrCodeBase64
+            business.QrCodeBase64,
+            business.BusinessStatus ?? "approved"
         );
     }
 
@@ -147,7 +148,8 @@ public class BusinessService : IBusinessService
             business.AverageResponseTime,
             business.ProfileClicks,
             business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
-            business.QrCodeBase64
+            business.QrCodeBase64,
+            business.BusinessStatus ?? "approved"
         );
     }
 
@@ -254,8 +256,26 @@ public class BusinessService : IBusinessService
 
         return dto;
     }
+
+    public async Task ClaimBusinessAsync(BusinessClaimsDto dto)
+    {
+        var business = await _repository.FindByIdAsync(dto.Id)
+                      ?? throw new BusinessNotFoundException($"Business {dto.Id} not found.");
+
+        switch (business.BusinessStatus)
+        {
+            case "approved":
+                throw new BusinessConflictException("Business already approved.");
+            case "in_progress":
+                throw new BusinessConflictException("Business approval in progress.");
+        }
+        
+        // add claim
+        var claim = new BusinessClaims{Id =dto.Id, Role = dto.Role, Name = dto.Name, Email = dto.Email, Phone = dto.Phone};
+        await _repository.ClaimAsync(claim);
+    }
     
-    public async Task<List<BusinessSummaryDto>> GetBusinessesByCategoryAsync(Guid categoryId)
+    public async Task<List<BusinessSummaryResponseDto>> GetBusinessesByCategoryAsync(Guid categoryId)
     {
         // validate category exists
         var category = await _categoryRepository.FindByIdAsync(categoryId);
@@ -264,16 +284,22 @@ public class BusinessService : IBusinessService
 
         var businesses = await _repository.GetBusinessesByCategoryAsync(categoryId);
 
-        return businesses.Select(b => new BusinessSummaryDto(
+        return businesses.Select(b => new BusinessSummaryResponseDto(
             b.Id,
             b.Name,
             b.AvgRating,
             b.ReviewCount,
             b.IsBranch,
-            b.ParentBusinessId
+            b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
+            b.BusinessAddress,
+            b.Logo,
+            b.BusinessPhoneNumber,
+            b.Tags,
+            "Review Summary"
+            // b.ParentBusinessId
         )).ToList();
     }
-    public async Task<List<BusinessDto>> GetBusinessesByTagAsync(Guid tagId)
+    public async Task<List<BusinessSummaryResponseDto>> GetBusinessesByTagAsync(Guid tagId)
     {
         // 1. Get the tag → find its category
         var tag = await _tagRepository.FindByIdAsync(tagId);
@@ -284,38 +310,24 @@ public class BusinessService : IBusinessService
 
         // 2. Fetch businesses assigned to this category
         var businesses = await _repository.GetBusinessesByCategoryIdAsync(categoryId);
+        Console.WriteLine(businesses);
 
         // 3. Map to DTOs
-        return businesses.Select(b => new BusinessDto(
+        return businesses.Select(b => new BusinessSummaryResponseDto(
             b.Id,
             b.Name,
-            b.Website,
-            b.IsBranch,
             b.AvgRating,
             b.ReviewCount,
-            b.ParentBusinessId,
+            b.IsBranch,
             b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
             b.BusinessAddress,
             b.Logo,
-            DeserializeOpeningHours(b.OpeningHours),
-            b.BusinessEmail,
             b.BusinessPhoneNumber,
-            b.CacNumber,
-            b.AccessUsername,
-            b.AccessNumber,
-            b.SocialMediaLinks,
-            b.BusinessDescription,
-            b.Media,
-            b.IsVerified,
-            b.ReviewLink,
-            b.PreferredContactMethod,
-            b.Highlights,
             b.Tags,
-            b.AverageResponseTime,
-            b.ProfileClicks,
-            b.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
-            b.QrCodeBase64
+            "Review Summary"
+            // b.ParentBusinessId
         )).ToList();
+        
     }
 
     private static Dictionary<string, string>? DeserializeOpeningHours(string? json)

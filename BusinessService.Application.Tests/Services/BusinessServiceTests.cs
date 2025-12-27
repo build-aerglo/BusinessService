@@ -41,6 +41,7 @@ public class BusinessServiceTests
             _searchProducerMock.Object,
             _tagRepoMock.Object
         );
+        
     }
 
     // ---------------------------------------------------------
@@ -252,5 +253,144 @@ public class BusinessServiceTests
         result.Should().NotBeNull();
         result.Should().BeEmpty();
     }
+    
+    // business claim tests
 
+    [Test]
+    public async Task ClaimBusinessAsync_ShouldClaimBusiness_WhenBusinessExistsAndNotClaimed()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BusinessClaimsDto
+        (
+            businessId,
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        var business = new Business
+        {
+            Id = businessId,
+            Name = "Test Business",
+            BusinessStatus = "pending"
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+
+        _businessRepoMock.Setup(r => r.ClaimAsync(It.IsAny<BusinessClaims>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.ClaimBusinessAsync(dto);
+
+        // Assert
+        _businessRepoMock.Verify(r => r.FindByIdAsync(businessId), Times.Once);
+        _businessRepoMock.Verify(r => r.ClaimAsync(It.Is<BusinessClaims>(c =>
+            c.Id == businessId &&
+            c.Role == "Owner" &&
+            c.Name == "John Doe" &&
+            c.Email == "john@example.com" &&
+            c.Phone == "+1234567890"
+        )), Times.Once);
+    }
+
+    [Test]
+    public void ClaimBusinessAsync_ShouldThrowBusinessNotFoundException_WhenBusinessDoesNotExist()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BusinessClaimsDto
+        (
+            businessId,
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync((Business)null);
+
+        // Act
+        Func<Task> act = async () => await _service.ClaimBusinessAsync(dto);
+
+        // Assert
+        act.Should().ThrowAsync<BusinessNotFoundException>()
+            .WithMessage($"Business {businessId} not found.");
+
+        _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
+    }
+
+    [Test]
+    public void ClaimBusinessAsync_ShouldThrowBusinessConflictException_WhenBusinessIsApproved()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BusinessClaimsDto
+        (
+            businessId,
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        var business = new Business
+        {
+            Id = businessId,
+            Name = "Test Business",
+            BusinessStatus = "approved"
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+
+        // Act
+        Func<Task> act = async () => await _service.ClaimBusinessAsync(dto);
+
+        // Assert
+        act.Should().ThrowAsync<BusinessConflictException>()
+            .WithMessage("Business already approved.");
+
+        _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
+    }
+
+    [Test]
+    public void ClaimBusinessAsync_ShouldThrowBusinessConflictException_WhenBusinessIsInProgress()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BusinessClaimsDto
+        (
+            businessId,
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        var business = new Business
+        {
+            Id = businessId,
+            Name = "Test Business",
+            BusinessStatus = "in_progress"
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+
+        // Act
+        Func<Task> act = async () => await _service.ClaimBusinessAsync(dto);
+
+        // Assert
+        act.Should().ThrowAsync<BusinessConflictException>()
+            .WithMessage("Business approval in progress.");
+
+        _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
+    }
+    
 }
+

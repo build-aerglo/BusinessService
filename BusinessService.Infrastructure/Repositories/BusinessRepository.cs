@@ -54,6 +54,7 @@ public async Task AddAsync(Business business)
             profile_clicks,
             faqs,
             qr_code_base64,
+            business_status,
             created_at,
             updated_at
         )
@@ -85,6 +86,7 @@ public async Task AddAsync(Business business)
             @ProfileClicks,
             CAST(@Faqs AS JSONB),
             @QrCodeBase64,
+            @BusinessStatus,
             @CreatedAt,
             @UpdatedAt
         );
@@ -141,6 +143,7 @@ public async Task AddAsync(Business business)
             : null,
 
         business.QrCodeBase64,
+        business.BusinessStatus,
         business.CreatedAt,
         business.UpdatedAt
     });
@@ -162,9 +165,42 @@ public async Task AddAsync(Business business)
 
         await conn.ExecuteAsync(joinSql, joinRows);
     }
+    
+    
 }
 
 
+async Task UpdateBusinessStatusAsync(Guid id, string status)
+{
+    const string sql = """
+                           UPDATE business
+                           SET business_status = @Status,
+                               updated_at = now()
+                           WHERE id = @Id;
+                       """;
+    using var conn = _context.CreateConnection();
+    await conn.ExecuteAsync(sql, new{id, status});
+}
+    
+public async Task ClaimAsync(BusinessClaims claim)
+{
+    const string sql = @"
+            INSERT INTO business_claims (business_id, name, role, email, phone, verified, created_at, updated_at)
+            VALUES (@Id, @Name, @Role, @Email, @Phone, false, now(), now());
+        ";
+    using var conn = _context.CreateConnection();
+    await conn.ExecuteAsync(sql, new
+    {
+        claim.Id,
+        claim.Name,
+        claim.Role,
+        claim.Email,
+        claim.Phone,
+    });
+        
+    // update business status to in progress
+    await UpdateBusinessStatusAsync(claim.Id, "in_progress");
+}
 
     public async Task<Business?> FindByIdAsync(Guid id)
     {
@@ -337,6 +373,7 @@ public async Task UpdateProfileAsync(Business business)
         return results.ToList();
     }
     
+
     public async Task<List<Business>> GetBusinessesByCategoryAsync(Guid categoryId)
     {
         const string sql = """
@@ -351,18 +388,57 @@ public async Task UpdateProfileAsync(Business business)
         return results.ToList();
     }
 
+    // public async Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId)
+    // {
+    //     const string sql = """
+    //                            SELECT b.*
+    //                            FROM business b
+    //                            JOIN business_category bc ON bc.business_id = b.id
+    //                            WHERE bc.category_id = @categoryId;
+    //                        """;
+    //
+    //     using var conn = _context.CreateConnection();
+    //     var businesses = await conn.QueryAsync<Business>(sql, new { categoryId });
+    //     return businesses.ToList();
+    // }
+    
     public async Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId)
     {
         const string sql = """
-                               SELECT b.*
+                               SELECT
+                                   b.*,
+                                   c.id,
+                                   c.name
                                FROM business b
                                JOIN business_category bc ON bc.business_id = b.id
-                               WHERE bc.category_id = @categoryId;
+                               JOIN category c ON c.id = bc.category_id
+                               WHERE c.id = @categoryId;
                            """;
 
         using var conn = _context.CreateConnection();
-        var businesses = await conn.QueryAsync<Business>(sql, new { categoryId });
-        return businesses.ToList();
+
+        var lookup = new Dictionary<Guid, Business>();
+
+        var result = await conn.QueryAsync<Business, Category, Business>(
+            sql,
+            (business, category) =>
+            {
+                if (!lookup.TryGetValue(business.Id, out var b))
+                {
+                    b = business;
+                    b.Categories = new List<Category>();
+                    lookup[b.Id] = b;
+                }
+
+                b.Categories.Add(category);
+                return b;
+            },
+            new { categoryId },
+            splitOn: "id"
+        );
+
+        return lookup.Values.ToList();
     }
+
 
 }
