@@ -28,5 +28,6 @@ public record BusinessDto(
     string? AverageResponseTime,
     long ProfileClicks,
     List<FaqDto>? Faqs,
-    string? QrCodeBase64
+    string? QrCodeBase64,
+    string? BusinessStatus
 );
