@@ -34,6 +34,8 @@ public class Business
     public List<Faq>? Faqs { get; set; }
     [Column("qr_code_base64")]
     public string? QrCodeBase64 { get; set; }
+    
+    public string? BusinessStatus { get; set; }
 
     public List<Category> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

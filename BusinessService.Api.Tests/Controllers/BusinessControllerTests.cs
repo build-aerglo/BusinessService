@@ -55,7 +55,8 @@ public class BusinessControllerTests
             null,
             0,
             new List<FaqDto>(),
-            "BASE64_TEST_QR"   // NEW ARGUMENT ✔️
+            "BASE64_TEST_QR",   // NEW ARGUMENT ✔️
+            "approved"
         );
     }
 
@@ -184,10 +185,10 @@ public class BusinessControllerTests
     {
         var categoryId = Guid.NewGuid();
 
-        var expected = new List<BusinessSummaryDto>
+        var expected = new List<BusinessSummaryResponseDto>
         {
-            new BusinessSummaryDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null),
-            new BusinessSummaryDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null)
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null, true),
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null, true)
         };
 
         _serviceMock
@@ -225,7 +226,7 @@ public class BusinessControllerTests
     {
         var categoryId = Guid.NewGuid();
 
-        var expected = new List<BusinessSummaryDto>();
+        var expected = new List<BusinessSummaryResponseDto>();
 
         _serviceMock
             .Setup(s => s.GetBusinessesByCategoryAsync(categoryId))
@@ -237,8 +238,151 @@ public class BusinessControllerTests
         ok.Should().NotBeNull();
         ok!.StatusCode.Should().Be(200);
 
-        var response = ok.Value as List<BusinessSummaryDto>;
+        var response = ok.Value as List<BusinessSummaryResponseDto>;
         response.Should().NotBeNull();
         response!.Count.Should().Be(0);
+    }
+    
+    // business claim tests
+    [Test]
+    public async Task ClaimBusiness_ShouldReturnOk_WhenClaimIsSuccessful()
+    {
+        // Arrange
+        var dto = new BusinessClaimsDto
+        (
+            Guid.NewGuid(),
+            "John Doe",
+            "Owner",
+            "john@example.com", 
+            "+1234567890"
+        );
+
+        _serviceMock.Setup(s => s.ClaimBusinessAsync(dto))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.ClaimBusiness(dto);
+
+        // Assert
+        result.Should().BeOfType<OkResult>();
+        _serviceMock.Verify(s => s.ClaimBusinessAsync(dto), Times.Once);
+    }
+
+    [Test]
+    public async Task ClaimBusiness_ShouldReturnNotFound_WhenBusinessDoesNotExist()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BusinessClaimsDto
+        (
+            businessId,
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        var exception = new BusinessNotFoundException($"Business {businessId} not found.");
+
+        _serviceMock.Setup(s => s.ClaimBusinessAsync(dto))
+            .ThrowsAsync(exception);
+
+        // Act
+        var result = await _controller.ClaimBusiness(dto);
+
+        // Assert
+        var notFound = result as ObjectResult;
+        notFound.Should().NotBeNull();
+        notFound!.StatusCode.Should().Be(404);
+        notFound.Value.Should().BeEquivalentTo(new { error = $"Business {businessId} not found." });
+        
+    }
+
+    [Test]
+    public async Task ClaimBusiness_ShouldReturnConflict_WhenBusinessIsAlreadyApproved()
+    {
+        // Arrange
+        var dto = new BusinessClaimsDto
+        (
+            Guid.NewGuid(),
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        var exception = new BusinessConflictException("Business already approved.");
+
+        _serviceMock.Setup(s => s.ClaimBusinessAsync(dto))
+            .ThrowsAsync(exception);
+
+        // Act
+        var result = await _controller.ClaimBusiness(dto);
+
+        // Assert
+        var conflict = result as ObjectResult;
+        conflict.Should().NotBeNull();
+        conflict!.StatusCode.Should().Be(409);
+        conflict.Value.Should().BeEquivalentTo(new { error = "Business already approved." });
+
+    }
+
+    [Test]
+    public async Task ClaimBusiness_ShouldReturnConflict_WhenBusinessApprovalIsInProgress()
+    {
+        // Arrange
+        var dto = new BusinessClaimsDto
+        (
+            Guid.NewGuid(),
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        var exception = new BusinessConflictException("Business approval in progress.");
+
+        _serviceMock.Setup(s => s.ClaimBusinessAsync(dto))
+            .ThrowsAsync(exception);
+
+        // Act
+        var result = await _controller.ClaimBusiness(dto);
+
+        // Assert
+        var conflict = result as ObjectResult;
+        conflict.Should().NotBeNull();
+        conflict!.StatusCode.Should().Be(409);
+        conflict.Value.Should().BeEquivalentTo(new { error = "Business approval in progress." });
+    
+    }
+
+    [Test]
+    public async Task ClaimBusiness_ShouldCallServiceWithCorrectDto()
+    {
+        // Arrange
+        var dto = new BusinessClaimsDto
+        (
+            Guid.NewGuid(),
+            "John Doe",
+            "Owner",
+            "john@example.com",
+            "+1234567890"
+        );
+
+        _serviceMock.Setup(s => s.ClaimBusinessAsync(It.IsAny<BusinessClaimsDto>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _controller.ClaimBusiness(dto);
+
+        // Assert
+        _serviceMock.Verify(s => s.ClaimBusinessAsync(
+            It.Is<BusinessClaimsDto>(d =>
+                d.Id == dto.Id &&
+                d.Role == dto.Role &&
+                d.Name == dto.Name &&
+                d.Email == dto.Email &&
+                d.Phone == dto.Phone
+            )), Times.Once);
     }
 }
