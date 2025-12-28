@@ -11,5 +11,6 @@ public record BusinessSummaryResponseDto(
     string? Logo,
     string? BusinessPhoneNumber,
     string[]? Tags,
-    string? ReviewSummary
+    string? ReviewSummary,
+    bool? isVerified
     );

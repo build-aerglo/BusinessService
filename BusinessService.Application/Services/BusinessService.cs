@@ -295,7 +295,8 @@ public class BusinessService : IBusinessService
             b.Logo,
             b.BusinessPhoneNumber,
             b.Tags,
-            "Review Summary"
+            "Review Summary",
+            b.IsVerified
             // b.ParentBusinessId
         )).ToList();
     }
@@ -324,7 +325,8 @@ public class BusinessService : IBusinessService
             b.Logo,
             b.BusinessPhoneNumber,
             b.Tags,
-            "Review Summary"
+            "Review Summary",
+            b.IsVerified
             // b.ParentBusinessId
         )).ToList();
         

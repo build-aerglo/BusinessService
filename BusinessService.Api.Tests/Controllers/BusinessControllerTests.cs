@@ -187,8 +187,8 @@ public class BusinessControllerTests
 
         var expected = new List<BusinessSummaryResponseDto>
         {
-            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null),
-            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null)
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null, true),
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null, true)
         };
 
         _serviceMock
@@ -296,21 +296,6 @@ public class BusinessControllerTests
         notFound!.StatusCode.Should().Be(404);
         notFound.Value.Should().BeEquivalentTo(new { error = $"Business {businessId} not found." });
         
-        // var notFound = result as NotFoundObjectResult;
-        // notFound.Should().NotBeNull();
-        // notFound!.StatusCode.Should().Be(404);
-        //
-        // var responseValue = notFound.Value as dynamic;
-        // ((string)responseValue.error).Should().Be($"Business {businessId} not found.");
-        //
-        // _loggerMock.Verify(
-        //     x => x.Log(
-        //         LogLevel.Warning,
-        //         It.IsAny<EventId>(),
-        //         It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Business not found")),
-        //         exception,
-        //         It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-        //     Times.Once);
     }
 
     [Test]
