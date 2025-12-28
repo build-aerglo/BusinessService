@@ -253,7 +253,7 @@ public class BusinessControllerTests
             Guid.NewGuid(),
             "John Doe",
             "Owner",
-            "john@example.com",
+            "john@example.com", 
             "+1234567890"
         );
 
