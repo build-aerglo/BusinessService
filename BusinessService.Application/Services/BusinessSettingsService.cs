@@ -288,7 +288,7 @@ public class BusinessSettingsService : IBusinessSettingsService
             settings.ReviewsPrivate,
             settings.ReviewsPrivateEnabledAt,
             settings.PrivateReviewsReason,
-            
+            // DnD Mode
             settings.DndModeEnabled,
             settings.DndModeEnabledAt,
             settings.DndModeExpiresAt,
