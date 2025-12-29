@@ -284,10 +284,23 @@ public class BusinessSettingsService : IBusinessSettingsService
         return new BusinessSettingsDto(
             settings.Id,
             settings.BusinessId,
+            // Private Reviews
             settings.ReviewsPrivate,
+            settings.ReviewsPrivateEnabledAt,
+            settings.PrivateReviewsReason,
+            // DnD Mode
             settings.DndModeEnabled,
             settings.DndModeEnabledAt,
             settings.DndModeExpiresAt,
+            settings.DndModeReason,
+            settings.DndExtensionCount,
+            settings.DndModeMessage,
+            settings.GetRemainingDndHours(),
+            // Auto-response
+            settings.AutoResponseEnabled,
+            settings.AutoResponseEnabledAt,
+            // External sources
+            settings.ExternalSourcesConnected,
             settings.CreatedAt,
             settings.UpdatedAt,
             settings.ModifiedByUserId
