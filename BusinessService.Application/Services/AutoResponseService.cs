@@ -210,7 +210,7 @@ public class AutoResponseService : IAutoResponseService
 
         settings.EnableAutoResponse();
         settings.ModifiedByUserId = enabledByUserId;
-        await _settingsRepository.UpdateAsync(settings);
+        await _settingsRepository.UpdateBusinessSettingsAsync(settings);
 
         await CreateDefaultTemplatesAsync(businessId);
     }
@@ -223,7 +223,7 @@ public class AutoResponseService : IAutoResponseService
 
         settings.DisableAutoResponse();
         settings.ModifiedByUserId = disabledByUserId;
-        await _settingsRepository.UpdateAsync(settings);
+        await _settingsRepository.UpdateBusinessSettingsAsync(settings);
     }
 
     private static AutoResponseTemplateDto MapToDto(AutoResponseTemplate template)

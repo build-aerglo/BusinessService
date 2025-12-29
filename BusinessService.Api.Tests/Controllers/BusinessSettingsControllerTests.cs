@@ -24,22 +24,63 @@ public class BusinessSettingsControllerTests
         _controller = new BusinessSettingsController(_serviceMock.Object, _loggerMock.Object);
     }
 
+    private static BusinessSettingsDto CreateBusinessSettingsDto(
+        Guid businessId,
+        Guid? modifiedByUserId = null,
+        bool reviewsPrivate = false,
+        DateTime? reviewsPrivateEnabledAt = null,
+        string? privateReviewsReason = null,
+        bool dndModeEnabled = false,
+        DateTime? dndModeEnabledAt = null,
+        DateTime? dndModeExpiresAt = null,
+        string? dndModeReason = null,
+        int dndExtensionCount = 0,
+        string? dndModeMessage = null,
+        double? remainingDndHours = null,
+        bool autoResponseEnabled = false,
+        DateTime? autoResponseEnabledAt = null,
+        int externalSourcesConnected = 0
+    )
+    {
+        var now = DateTime.UtcNow;
+
+        return new BusinessSettingsDto(
+            Id: Guid.NewGuid(),
+            BusinessId: businessId,
+
+            // Private Reviews (Premium+)
+            ReviewsPrivate: reviewsPrivate,
+            ReviewsPrivateEnabledAt: reviewsPrivateEnabledAt,
+            PrivateReviewsReason: privateReviewsReason,
+
+            // DnD Mode (Enterprise)
+            DndModeEnabled: dndModeEnabled,
+            DndModeEnabledAt: dndModeEnabledAt,
+            DndModeExpiresAt: dndModeExpiresAt,
+            DndModeReason: dndModeReason,
+            DndExtensionCount: dndExtensionCount,
+            DndModeMessage: dndModeMessage,
+            RemainingDndHours: remainingDndHours,
+
+            // Auto-response (Enterprise)
+            AutoResponseEnabled: autoResponseEnabled,
+            AutoResponseEnabledAt: autoResponseEnabledAt,
+
+            // External sources
+            ExternalSourcesConnected: externalSourcesConnected,
+
+            CreatedAt: now,
+            UpdatedAt: now,
+            ModifiedByUserId: modifiedByUserId
+        );
+    }
+
     [Test]
     public async Task GetBusinessSettings_ShouldReturnOk_WhenSuccessful()
     {
         // Arrange
         var businessId = Guid.NewGuid();
-        var dto = new BusinessSettingsDto(
-            Guid.NewGuid(),
-            businessId,
-            false,
-            false,
-            null,
-            null,
-            DateTime.UtcNow,
-            DateTime.UtcNow,
-            null
-        );
+        var dto = CreateBusinessSettingsDto(businessId);
 
         _serviceMock.Setup(s => s.GetBusinessSettingsAsync(businessId))
             .ReturnsAsync(dto);
@@ -65,17 +106,7 @@ public class BusinessSettingsControllerTests
             ReviewsPrivate = false
         };
 
-        var dto = new BusinessSettingsDto(
-            Guid.NewGuid(),
-            businessId,
-            false,
-            false,
-            null,
-            null,
-            DateTime.UtcNow,
-            DateTime.UtcNow,
-            userId // ModifiedByUserId should be userId from endpoint
-        );
+        var dto = CreateBusinessSettingsDto(businessId, modifiedByUserId: userId, reviewsPrivate: false);
 
         _serviceMock.Setup(s => s.UpdateBusinessSettingsAsync(businessId, request, userId))
             .ReturnsAsync(dto);
@@ -88,8 +119,7 @@ public class BusinessSettingsControllerTests
         ok.Should().NotBeNull();
         ok!.StatusCode.Should().Be(200);
         ok.Value.Should().BeEquivalentTo(dto);
-        
-        // Verify the service was called with currentUserId
+
         _serviceMock.Verify(s => s.UpdateBusinessSettingsAsync(businessId, request, userId), Times.Once);
     }
 
@@ -155,7 +185,7 @@ public class BusinessSettingsControllerTests
             null,
             DateTime.UtcNow,
             DateTime.UtcNow,
-            userId // ModifiedByUserId should be userId from endpoint
+            userId
         );
 
         _serviceMock.Setup(s => s.UpdateRepSettingsAsync(businessRepId, request, userId))
@@ -168,8 +198,7 @@ public class BusinessSettingsControllerTests
         var ok = result as OkObjectResult;
         ok.Should().NotBeNull();
         ok!.Value.Should().BeEquivalentTo(dto);
-        
-        // Verify the service was called with currentUserId
+
         _serviceMock.Verify(s => s.UpdateRepSettingsAsync(businessRepId, request, userId), Times.Once);
     }
 
@@ -196,16 +225,18 @@ public class BusinessSettingsControllerTests
         var businessId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var additionalHours = 24;
-        var dto = new BusinessSettingsDto(
-            Guid.NewGuid(),
+
+        var enabledAt = DateTime.UtcNow;
+        var expiresAt = enabledAt.AddHours(84);
+
+        var dto = CreateBusinessSettingsDto(
             businessId,
-            false,
-            true,
-            DateTime.UtcNow,
-            DateTime.UtcNow.AddHours(84),
-            DateTime.UtcNow,
-            DateTime.UtcNow,
-            userId // ModifiedByUserId should be userId from endpoint
+            modifiedByUserId: userId,
+            dndModeEnabled: true,
+            dndModeEnabledAt: enabledAt,
+            dndModeExpiresAt: expiresAt,
+            remainingDndHours: 84,
+            dndExtensionCount: 1
         );
 
         _serviceMock.Setup(s => s.ExtendDndModeAsync(businessId, additionalHours, userId))
@@ -218,8 +249,7 @@ public class BusinessSettingsControllerTests
         var ok = result as OkObjectResult;
         ok.Should().NotBeNull();
         ok!.StatusCode.Should().Be(200);
-        
-        // Verify the service was called with currentUserId
+
         _serviceMock.Verify(s => s.ExtendDndModeAsync(businessId, additionalHours, userId), Times.Once);
     }
 
