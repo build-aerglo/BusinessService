@@ -56,7 +56,11 @@ public class BusinessControllerTests
             0,
             new List<FaqDto>(),
             "BASE64_TEST_QR",   // NEW ARGUMENT ✔️
-            "approved"
+            "approved",
+            null,
+            null,
+            null,
+            null
         );
     }
 
@@ -187,8 +191,8 @@ public class BusinessControllerTests
 
         var expected = new List<BusinessSummaryResponseDto>
         {
-            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null, true),
-            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null, true)
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null, true, null, null, null),
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null, true, null, null, null)
         };
 
         _serviceMock

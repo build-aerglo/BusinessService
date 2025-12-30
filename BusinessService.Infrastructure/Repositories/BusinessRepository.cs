@@ -55,6 +55,9 @@ public async Task AddAsync(Business business)
             faqs,
             qr_code_base64,
             business_status,
+            business_street,
+            business_citytown,
+            business_state,
             created_at,
             updated_at
         )
@@ -87,6 +90,9 @@ public async Task AddAsync(Business business)
             CAST(@Faqs AS JSONB),
             @QrCodeBase64,
             @BusinessStatus,
+            @BusinessStreet,
+            @BusinessCityTown,
+            @BusinessState,
             @CreatedAt,
             @UpdatedAt
         );
@@ -144,6 +150,9 @@ public async Task AddAsync(Business business)
 
         business.QrCodeBase64,
         business.BusinessStatus,
+        business.BusinessStreet,
+        business.BusinessCityTown,
+        business.BusinessState,
         business.CreatedAt,
         business.UpdatedAt
     });
@@ -170,7 +179,7 @@ public async Task AddAsync(Business business)
 }
 
 
-async Task UpdateBusinessStatusAsync(Guid id, string status)
+public async Task UpdateBusinessStatusAsync(Guid id, string status)
 {
     const string sql = """
                            UPDATE business
@@ -289,6 +298,9 @@ public async Task UpdateProfileAsync(Business business)
             average_response_time = @AverageResponseTime,
             profile_clicks = @ProfileClicks,
             faqs = CAST(@Faqs AS JSONB),
+            business_street = @BusinessStreet,
+            business_citytown = @BusinessCityTown,
+            business_state = @BusinessState,
             updated_at = @UpdatedAt
         WHERE id = @Id;
     """;
@@ -332,6 +344,9 @@ public async Task UpdateProfileAsync(Business business)
         Faqs = business.Faqs != null
             ? JsonConvert.SerializeObject(business.Faqs)
             : null,
+        business.BusinessStreet,
+        business.BusinessCityTown,
+        business.BusinessState,
 
         business.UpdatedAt
     },tx);
@@ -364,7 +379,6 @@ public async Task UpdateProfileAsync(Business business)
     tx.Commit();
 }
 
-
     public async Task<List<Business>> GetBranchesAsync(Guid parentId)
     {
         const string sql = "SELECT * FROM business WHERE parent_business_id = @parentId;";
@@ -387,20 +401,6 @@ public async Task UpdateProfileAsync(Business business)
         var results = await conn.QueryAsync<Business>(sql, new { categoryId });
         return results.ToList();
     }
-
-    // public async Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId)
-    // {
-    //     const string sql = """
-    //                            SELECT b.*
-    //                            FROM business b
-    //                            JOIN business_category bc ON bc.business_id = b.id
-    //                            WHERE bc.category_id = @categoryId;
-    //                        """;
-    //
-    //     using var conn = _context.CreateConnection();
-    //     var businesses = await conn.QueryAsync<Business>(sql, new { categoryId });
-    //     return businesses.ToList();
-    // }
     
     public async Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId)
     {
@@ -440,5 +440,76 @@ public async Task UpdateProfileAsync(Business business)
         return lookup.Values.ToList();
     }
 
+    // branch repos
+    public async Task<List<BusinessBranches?>> GetBusinessBranchesAsync(Guid parentId)
+    {
+        const string sql = "SELECT * FROM business_branches WHERE business_id = @parentId AND branch_status = 'active';";
+        using var conn = _context.CreateConnection();
+        var results = await conn.QueryAsync<BusinessBranches>(sql, new { parentId });
+        return results.ToList();
+    }
 
+    public async Task AddBusinessBranchAsync(BusinessBranches branch)
+    {
+        const string sql = @"
+            INSERT INTO business_branches (business_id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
+            VALUES (@BusinessId, @Name, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
+        ";
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            branch.BusinessId,
+            branch.Name,
+            branch.BranchStreet,
+            branch.BranchCityTown,
+            branch.BranchState
+        });
+    }
+    
+    public async Task DeleteBusinessBranchAsync(Guid id)
+    {
+        const string sql = """
+                               UPDATE business_branches
+                               SET branch_status = 'inactive',
+                                   updated_at = now()
+                               WHERE id = @Id;
+                           """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new{id});
+    }
+    
+    public async Task UpdateBusinessBranchAsync(BusinessBranches branch)
+    {
+        const string sql = """
+                               UPDATE business_branches
+                               SET branch_name = @Name,
+                                   branch_street = @BranchStreet,
+                                   branch_citytown = @BranchCityTown,
+                                   branch_state = @BranchState,
+                                   updated_at = @UpdatedAt
+                               WHERE id = @Id;
+                           """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            branch.Id,
+            branch.Name,
+            branch.BranchStreet,
+            branch.BranchCityTown,
+            branch.BranchState
+        });
+    }
+    
+    public async Task<BusinessBranches?> FindBranchByIdAsync(Guid id)
+    {
+        const string sql = """
+                               SELECT * FROM business_branches WHERE id = @id;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        var branch = await conn.QuerySingleOrDefaultAsync<BusinessBranches>(sql, new { id });
+        if (branch == null) return null;
+
+        return branch;
+    }
 }

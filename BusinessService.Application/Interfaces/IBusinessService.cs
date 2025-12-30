@@ -1,4 +1,5 @@
 using BusinessService.Application.DTOs;
+using BusinessService.Domain.Entities;
 
 namespace BusinessService.Application.Interfaces;
 
@@ -12,5 +13,11 @@ public interface IBusinessService
     Task ClaimBusinessAsync(BusinessClaimsDto dto);
     Task<List<BusinessSummaryResponseDto>> GetBusinessesByCategoryAsync(Guid categoryId);
     Task<List<BusinessSummaryResponseDto>> GetBusinessesByTagAsync(Guid tagId);
+    
+    // branches
+    Task<List<BusinessBranches?>> GetBusinessBranchesAsync(Guid businessId);
+    Task AddBranchesAsync(BranchDto dto);
+    Task DeleteBranchesAsync(Guid id);
+    Task<BusinessBranches> UpdateBranchesAsync(BranchUpdateDto dto);
 
 }

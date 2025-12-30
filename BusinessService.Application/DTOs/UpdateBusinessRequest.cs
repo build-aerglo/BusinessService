@@ -35,4 +35,7 @@ public class UpdateBusinessRequest
 
     // FIXED: Nullable for PATCH, validated only if provided
     public List<Guid>? CategoryIds { get; set; }
+    public string? BusinessStreet { get; set; }
+    public string? BusinessCityTown { get; set; }
+    public string? BusinessState{ get; set; }
 }

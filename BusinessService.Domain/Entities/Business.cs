@@ -36,6 +36,12 @@ public class Business
     public string? QrCodeBase64 { get; set; }
     
     public string? BusinessStatus { get; set; }
+    
+    public string? BusinessStreet { get; set; }
+    public string? BusinessCityTown { get; set; }
+    public string? BusinessState{ get; set; }
+    
+    public string? ReviewSummary { get; set; }
 
     public List<Category> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
