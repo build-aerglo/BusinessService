@@ -377,7 +377,7 @@ public class BusinessService : IBusinessService
     // branches
     public async Task<List<BusinessBranches?>> GetBusinessBranchesAsync(Guid businessId)
     {
-        var business = await _repository.FindByIdAsync(businessId)
+        _ = await _repository.FindByIdAsync(businessId)
                        ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
 
         return await _repository.GetBusinessBranchesAsync(businessId);
@@ -385,20 +385,20 @@ public class BusinessService : IBusinessService
     
     public async Task AddBranchesAsync(BranchDto dto)
     {
-        var business = await _repository.FindByIdAsync(dto.BusinessId)
+        _ = await _repository.FindByIdAsync(dto.BusinessId)
                        ?? throw new BusinessNotFoundException($"Business {dto.BusinessId} not found.");
         
         var branch = new BusinessBranches{Id = Guid.NewGuid(), BusinessId = dto.BusinessId, Name = dto.Name, BranchStreet = dto.BranchStreet, BranchCityTown = dto.BranchCityTown, BranchState = dto.BranchState, BranchStatus = "active"};
         await _repository.AddBusinessBranchAsync(branch);
         
-        var confirmBranch = await _repository.FindBranchByIdAsync(branch.Id)
+        _ = await _repository.FindBranchByIdAsync(branch.Id)
                      ?? throw new BranchNotFoundException("Business branch not created.");
         
     }
     
     public async Task DeleteBranchesAsync(Guid id)
     {
-        var branch = await _repository.FindBranchByIdAsync(id)
+        _ = await _repository.FindBranchByIdAsync(id)
                        ?? throw new BranchNotFoundException("Business branch not found.");
 
         await _repository.DeleteBusinessBranchAsync(id);

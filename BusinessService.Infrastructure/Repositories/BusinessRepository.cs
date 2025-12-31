@@ -387,20 +387,69 @@ public async Task UpdateProfileAsync(Business business)
         return results.ToList();
     }
     
-
     public async Task<List<Business>> GetBusinessesByCategoryAsync(Guid categoryId)
     {
-        const string sql = """
-                               SELECT b.*
-                               FROM business b
-                               INNER JOIN business_category bc ON bc.business_id = b.id
-                               WHERE bc.category_id = @categoryId;
-                           """;
+        const string businessSql = """
+                                       SELECT DISTINCT b.*
+                                       FROM business b
+                                       INNER JOIN business_category bc ON bc.business_id = b.id
+                                       WHERE bc.category_id = @categoryId;
+                                   """;
+
+        const string categorySql = """
+                                       SELECT
+                                           bc.business_id,
+                                           c.*
+                                       FROM category c
+                                       INNER JOIN business_category bc ON bc.category_id = c.id
+                                       WHERE bc.business_id = ANY(@businessIds);
+                                   """;
 
         using var conn = _context.CreateConnection();
-        var results = await conn.QueryAsync<Business>(sql, new { categoryId });
-        return results.ToList();
+
+        // 1. Load businesses
+        var businesses = (await conn.QueryAsync<Business>(
+            businessSql,
+            new { categoryId }
+        )).ToList();
+
+        if (!businesses.Any())
+            return businesses;
+
+        // 2. Load categories for all businesses in one query
+        var businessIds = businesses.Select(b => b.Id).ToArray();
+
+        var categoryLookup = new Dictionary<Guid, List<Category>>();
+
+        var rows = await conn.QueryAsync<Guid, Category, (Guid, Category)>(
+            categorySql,
+            (businessId, category) => (businessId, category),
+            new { businessIds },
+            splitOn: "id"
+        );
+
+        foreach (var (businessId, category) in rows)
+        {
+            if (!categoryLookup.TryGetValue(businessId, out var list))
+            {
+                list = new List<Category>();
+                categoryLookup[businessId] = list;
+            }
+
+            list.Add(category);
+        }
+
+        // 3. Attach categories
+        foreach (var business in businesses)
+        {
+            business.Categories = categoryLookup.TryGetValue(business.Id, out var cats)
+                ? cats
+                : new List<Category>();
+        }
+
+        return businesses;
     }
+
     
     public async Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId)
     {
