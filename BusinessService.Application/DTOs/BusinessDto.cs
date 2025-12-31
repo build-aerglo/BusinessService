@@ -29,5 +29,9 @@ public record BusinessDto(
     long ProfileClicks,
     List<FaqDto>? Faqs,
     string? QrCodeBase64,
-    string? BusinessStatus
+    string? BusinessStatus,
+    string? BusinessStreet,
+    string? BusinessCityTown,
+    string? BusinessState,
+    string? ReviewSummary
 );

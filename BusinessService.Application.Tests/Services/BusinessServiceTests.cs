@@ -392,5 +392,241 @@ public class BusinessServiceTests
         _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
     }
     
+    // branches
+    [Test]
+    public async Task GetBusinessBranchesAsync_ReturnsBranches_WhenBusinessExists()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var business = new Business { Id = businessId };
+
+        var branches = new List<BusinessBranches?>
+        {
+            new BusinessBranches { Id = Guid.NewGuid(), BusinessId = businessId }
+        };
+
+        _businessRepoMock
+            .Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+
+        _businessRepoMock
+            .Setup(r => r.GetBusinessBranchesAsync(businessId))
+            .ReturnsAsync(branches);
+
+        // Act
+        var result = await _service.GetBusinessBranchesAsync(businessId);
+
+        // Assert
+        result.Should().BeEquivalentTo(branches);
+    }
+
+    [Test]
+    public async Task GetBusinessBranchesAsync_Throws_WhenBusinessNotFound()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+
+        _businessRepoMock
+            .Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync((Business?)null);
+
+        // Act
+        Func<Task> act = () => _service.GetBusinessBranchesAsync(businessId);
+
+        // Assert
+        await act.Should().ThrowAsync<BusinessNotFoundException>();
+    }
+    
+    [Test]
+    public async Task AddBranchesAsync_AddsBranch_WhenBusinessExists()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BranchDto(
+            businessId,
+            "Branch Name",
+            "Street",
+            "City",
+            "State"
+        );
+
+        _businessRepoMock
+            .Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(new Business { Id = businessId });
+
+        _businessRepoMock
+            .Setup(r => r.AddBusinessBranchAsync(It.IsAny<BusinessBranches>()))
+            .Returns(Task.CompletedTask);
+
+        _businessRepoMock
+            .Setup(r => r.FindBranchByIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new BusinessBranches());
+
+        // Act
+        await _service.AddBranchesAsync(dto);
+
+        // Assert
+        _businessRepoMock.Verify(
+            r => r.AddBusinessBranchAsync(It.Is<BusinessBranches>(
+                b => b.BusinessId == businessId && b.Name == dto.Name
+            )),
+            Times.Once
+        );
+    }
+    
+    [Test]
+    public async Task AddBranchesAsync_Throws_WhenBusinessNotFound()
+    {
+        // Arrange
+        var dto = new BranchDto(
+            Guid.NewGuid(),
+            "Branch",
+            null,
+            null,
+            null
+        );
+
+        _businessRepoMock
+            .Setup(r => r.FindByIdAsync(dto.BusinessId))
+            .ReturnsAsync((Business?)null);
+
+        // Act
+        Func<Task> act = () => _service.AddBranchesAsync(dto);
+
+        // Assert
+        await act.Should().ThrowAsync<BusinessNotFoundException>();
+    }
+    
+    [Test]
+    public async Task AddBranchesAsync_Throws_WhenBranchNotCreated()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var dto = new BranchDto(
+            businessId,
+            "Branch",
+            null,
+            null,
+            null
+        );
+
+        _businessRepoMock
+            .Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(new Business { Id = businessId });
+
+        _businessRepoMock
+            .Setup(r => r.AddBusinessBranchAsync(It.IsAny<BusinessBranches>()))
+            .Returns(Task.CompletedTask);
+
+        _businessRepoMock
+            .Setup(r => r.FindBranchByIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync((BusinessBranches?)null);
+
+        // Act
+        Func<Task> act = () => _service.AddBranchesAsync(dto);
+
+        // Assert
+        await act.Should().ThrowAsync<BranchNotFoundException>();
+    }
+
+    [Test]
+    public async Task DeleteBranchesAsync_DeletesBranch_WhenFound()
+    {
+        // Arrange
+        var branchId = Guid.NewGuid();
+
+        _businessRepoMock
+            .Setup(r => r.FindBranchByIdAsync(branchId))
+            .ReturnsAsync(new BusinessBranches { Id = branchId });
+
+        _businessRepoMock
+            .Setup(r => r.DeleteBusinessBranchAsync(branchId))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.DeleteBranchesAsync(branchId);
+
+        // Assert
+        _businessRepoMock.Verify(
+            r => r.DeleteBusinessBranchAsync(branchId),
+            Times.Once
+        );
+    }
+    
+    [Test]
+    public async Task DeleteBranchesAsync_Throws_WhenBranchNotFound()
+    {
+        // Arrange
+        var branchId = Guid.NewGuid();
+
+        _businessRepoMock
+            .Setup(r => r.FindBranchByIdAsync(branchId))
+            .ReturnsAsync((BusinessBranches?)null);
+
+        // Act
+        Func<Task> act = () => _service.DeleteBranchesAsync(branchId);
+
+        // Assert
+        await act.Should().ThrowAsync<BranchNotFoundException>();
+    }
+    
+    [Test]
+    public async Task UpdateBranchesAsync_UpdatesAndReturnsBranch_WhenFound()
+    {
+        // Arrange
+        var dto = new BranchUpdateDto(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Updated Name",
+            "Street",
+            "City",
+            "State"
+        );
+
+        var branch = new BusinessBranches
+        {
+            Id = dto.Id,
+            Name = "Old Name"
+        };
+
+        _businessRepoMock
+            .Setup(r => r.FindBranchByIdAsync(dto.Id))
+            .ReturnsAsync(branch);
+
+        _businessRepoMock
+            .Setup(r => r.UpdateBusinessBranchAsync(branch))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.UpdateBranchesAsync(dto);
+
+        // Assert
+        result.Name.Should().Be("Updated Name");
+    }
+    
+    [Test]
+    public async Task UpdateBranchesAsync_Throws_WhenBranchNotFound()
+    {
+        // Arrange
+        var dto = new BranchUpdateDto(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Name",
+            null,
+            null,
+            null
+        );
+
+        _businessRepoMock
+            .Setup(r => r.FindBranchByIdAsync(dto.Id))
+            .ReturnsAsync((BusinessBranches?)null);
+
+        // Act
+        Func<Task> act = () => _service.UpdateBranchesAsync(dto);
+
+        // Assert
+        await act.Should().ThrowAsync<BranchNotFoundException>();
+    }
+
 }
 

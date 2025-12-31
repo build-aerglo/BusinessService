@@ -13,4 +13,5 @@ public class CreateBusinessRequest
     public required List<Guid> CategoryIds { get; set; }
 
     public Guid? ParentBusinessId { get; set; }
+    public string? Status { get; set; }
 }

@@ -66,7 +66,11 @@ public class BusinessService : IBusinessService
             business.ProfileClicks,
             business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
             business.QrCodeBase64,
-            business.BusinessStatus ?? "approved"
+            business.BusinessStatus,
+            business.BusinessStreet,
+            business.BusinessCityTown,
+            business.BusinessState,
+            business.ReviewSummary
         );
     }
 
@@ -91,11 +95,12 @@ public class BusinessService : IBusinessService
         ReviewCount = 0,
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
-        Categories = categories
+        Categories = categories,
+        BusinessStatus = request.Status ?? "approved",
     };
 
     // *** Generate the QR code content ***
-    string qrContent = $"https://clereview.com/business/{business.Id}";
+    string qrContent = $"https://clereview.com/biz/{business.Id}";
     business.QrCodeBase64 = _qrCodeService.GenerateQrCodeBase64(qrContent);
     business.ReviewLink = qrContent;
 
@@ -149,7 +154,11 @@ public class BusinessService : IBusinessService
             business.ProfileClicks,
             business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
             business.QrCodeBase64,
-            business.BusinessStatus ?? "approved"
+            business.BusinessStatus,
+            business.BusinessStreet,
+            business.BusinessCityTown,
+            business.BusinessState,
+            business.ReviewSummary
         );
     }
 
@@ -239,6 +248,9 @@ public class BusinessService : IBusinessService
                             .Select(f => new Faq(f.Question, f.Answer))
                             .ToList()
                         ?? business.Faqs;
+        business.BusinessStreet = request.BusinessStreet;
+        business.BusinessCityTown = request.BusinessCityTown;
+        business.BusinessState = request.BusinessState;
         business.UpdatedAt = DateTime.UtcNow;
 
         try
@@ -295,8 +307,11 @@ public class BusinessService : IBusinessService
             b.Logo,
             b.BusinessPhoneNumber,
             b.Tags,
-            "Review Summary",
-            b.IsVerified
+            b.ReviewSummary,
+            b.IsVerified,
+            b.BusinessStreet,
+            b.BusinessCityTown,
+            b.BusinessState
             // b.ParentBusinessId
         )).ToList();
     }
@@ -325,8 +340,11 @@ public class BusinessService : IBusinessService
             b.Logo,
             b.BusinessPhoneNumber,
             b.Tags,
-            "Review Summary",
-            b.IsVerified
+            b.ReviewSummary,
+            b.IsVerified,
+            b.BusinessStreet,
+            b.BusinessCityTown,
+            b.BusinessState
             // b.ParentBusinessId
         )).ToList();
         
@@ -355,6 +373,48 @@ public class BusinessService : IBusinessService
 
         return result;
     }
+    
+    // branches
+    public async Task<List<BusinessBranches?>> GetBusinessBranchesAsync(Guid businessId)
+    {
+        _ = await _repository.FindByIdAsync(businessId)
+                       ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
 
+        return await _repository.GetBusinessBranchesAsync(businessId);
+    }
+    
+    public async Task AddBranchesAsync(BranchDto dto)
+    {
+        _ = await _repository.FindByIdAsync(dto.BusinessId)
+                       ?? throw new BusinessNotFoundException($"Business {dto.BusinessId} not found.");
+        
+        var branch = new BusinessBranches{Id = Guid.NewGuid(), BusinessId = dto.BusinessId, Name = dto.Name, BranchStreet = dto.BranchStreet, BranchCityTown = dto.BranchCityTown, BranchState = dto.BranchState, BranchStatus = "active"};
+        await _repository.AddBusinessBranchAsync(branch);
+        
+        _ = await _repository.FindBranchByIdAsync(branch.Id)
+                     ?? throw new BranchNotFoundException("Business branch not created.");
+        
+    }
+    
+    public async Task DeleteBranchesAsync(Guid id)
+    {
+        _ = await _repository.FindBranchByIdAsync(id)
+                       ?? throw new BranchNotFoundException("Business branch not found.");
+
+        await _repository.DeleteBusinessBranchAsync(id);
+    }
+
+    public async Task<BusinessBranches> UpdateBranchesAsync(BranchUpdateDto dto)
+    {
+        var branch = await _repository.FindBranchByIdAsync(dto.Id)
+                     ?? throw new BranchNotFoundException("Business branch not found.");
+        branch.Name = dto.Name;
+        branch.BranchStreet = dto.BranchStreet;
+        branch.BranchCityTown = dto.BranchCityTown;
+        branch.BranchState = dto.BranchState;
+
+        await _repository.UpdateBusinessBranchAsync(branch);
+        return branch;
+    }
 }
 

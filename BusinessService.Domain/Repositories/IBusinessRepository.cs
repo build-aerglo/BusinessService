@@ -14,4 +14,10 @@ public interface IBusinessRepository
     Task ClaimAsync(BusinessClaims claim);
     Task<List<Business>> GetBusinessesByCategoryAsync(Guid categoryId);
     Task<List<Business>> GetBusinessesByCategoryIdAsync(Guid categoryId);
+    
+    Task <List<BusinessBranches?>> GetBusinessBranchesAsync(Guid parentId);
+    Task AddBusinessBranchAsync(BusinessBranches branch);
+    Task DeleteBusinessBranchAsync(Guid id);
+    Task UpdateBusinessBranchAsync(BusinessBranches branch);
+    Task<BusinessBranches?> FindBranchByIdAsync(Guid id);
 }
