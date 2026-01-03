@@ -94,4 +94,19 @@ public class BusinessBranchesController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+    
+    [HttpGet("branch/{branchId:guid}")]
+    public async Task<IActionResult> GetBranchById(Guid branchId)
+    {
+        try
+        {
+            var branch = await _service.GetBranchByIdAsync(branchId);
+            return Ok(branch);
+        }
+        catch (BranchNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Branch not found: {Message}", ex.Message);
+            return NotFound(new { error = ex.Message });
+        }
+    }
 }

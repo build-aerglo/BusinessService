@@ -415,5 +415,15 @@ public class BusinessService : IBusinessService
         await _repository.UpdateBusinessBranchAsync(branch);
         return branch;
     }
+    
+    
+    public async Task<BusinessBranches?> GetBranchByIdAsync(Guid branchId)
+    {
+        var branch = await _repository.FindBranchByIdAsync(branchId);
+        if (branch == null)
+            throw new BranchNotFoundException($"Branch {branchId} not found.");
+    
+        return branch;
+    }
 }
 
