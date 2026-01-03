@@ -29,8 +29,10 @@ public class BusinessBranchesController : ControllerBase
     {
         try
         {
-            var res = await _service.AddBranchesAsync(dto);
-            return Ok(res);
+            await _service.AddBranchesAsync(dto);
+            return Ok(new {
+                message = "Branch added successfully."
+            });
         }
         catch (BusinessNotFoundException ex)
         {

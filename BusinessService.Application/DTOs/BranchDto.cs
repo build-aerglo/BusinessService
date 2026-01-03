@@ -2,7 +2,7 @@ namespace BusinessService.Application.DTOs;
 
 public record BranchDto(
     Guid BusinessId,
-    string BranchName,
+    string Name,
     string? BranchStreet,
     string? BranchCityTown,
     string? BranchState
@@ -11,7 +11,7 @@ public record BranchDto(
     public record BranchUpdateDto(
         Guid Id,
         Guid BusinessId,
-        string BranchName,
+        string Name,
         string? BranchStreet,
         string? BranchCityTown,
         string? BranchState

@@ -16,7 +16,7 @@ public interface IBusinessService
     
     // branches
     Task<List<BusinessBranches?>> GetBusinessBranchesAsync(Guid businessId);
-    Task<BusinessBranches> AddBranchesAsync(BranchDto dto);
+    Task AddBranchesAsync(BranchDto dto);
     Task DeleteBranchesAsync(Guid id);
     Task<BusinessBranches> UpdateBranchesAsync(BranchUpdateDto dto);
 

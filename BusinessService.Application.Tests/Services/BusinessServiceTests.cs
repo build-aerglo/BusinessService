@@ -468,7 +468,7 @@ public class BusinessServiceTests
         // Assert
         _businessRepoMock.Verify(
             r => r.AddBusinessBranchAsync(It.Is<BusinessBranches>(
-                b => b.BusinessId == businessId && b.BranchName == dto.BranchName
+                b => b.BusinessId == businessId && b.Name == dto.Name
             )),
             Times.Once
         );
@@ -586,7 +586,7 @@ public class BusinessServiceTests
         var branch = new BusinessBranches
         {
             Id = dto.Id,
-            BranchName = "Old Name"
+            Name = "Old Name"
         };
 
         _businessRepoMock
@@ -601,7 +601,7 @@ public class BusinessServiceTests
         var result = await _service.UpdateBranchesAsync(dto);
 
         // Assert
-        result.BranchName.Should().Be("Updated Name");
+        result.Name.Should().Be("Updated Name");
     }
     
     [Test]
