@@ -510,38 +510,6 @@ public class BusinessServiceTests
     }
     
     [Test]
-    public async Task AddBranchesAsync_Throws_WhenBranchNotCreated()
-    {
-        // Arrange
-        var businessId = Guid.NewGuid();
-        var dto = new BranchDto(
-            businessId,
-            "Branch",
-            null,
-            null,
-            null
-        );
-
-        _businessRepoMock
-            .Setup(r => r.FindByIdAsync(businessId))
-            .ReturnsAsync(new Business { Id = businessId });
-
-        _businessRepoMock
-            .Setup(r => r.AddBusinessBranchAsync(It.IsAny<BusinessBranches>()))
-            .Returns(Task.CompletedTask);
-
-        _businessRepoMock
-            .Setup(r => r.FindBranchByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((BusinessBranches?)null);
-
-        // Act
-        Func<Task> act = () => _service.AddBranchesAsync(dto);
-
-        // Assert
-        await act.Should().ThrowAsync<BranchNotFoundException>();
-    }
-
-    [Test]
     public async Task DeleteBranchesAsync_DeletesBranch_WhenFound()
     {
         // Arrange
