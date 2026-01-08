@@ -14,4 +14,5 @@ public class CreateBusinessRequest
 
     public Guid? ParentBusinessId { get; set; }
     public string? Status { get; set; }
+    public string? BusinessCityTown { get; set; }
 }

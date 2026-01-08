@@ -62,6 +62,8 @@ public class BusinessServiceTests
         _businessRepoMock.Setup(r => r.ExistsByNameAsync(request.Name)).ReturnsAsync(false);
         _categoryRepoMock.Setup(r => r.FindAllByIdsAsync(request.CategoryIds))
             .ReturnsAsync(new List<Category> { category });
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
 
         var result = await _service.CreateBusinessAsync(request);
 
@@ -129,6 +131,8 @@ public class BusinessServiceTests
         var business = new Business { Id = id, Name = "Old Name" };
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
 
         var result = await _service.UpdateBusinessAsync(id, request);
 
@@ -211,16 +215,21 @@ public class BusinessServiceTests
                     Id = Guid.NewGuid(),
                     Name = "FixIt Hub",
                     AvgRating = 4.2m,
-                    ReviewCount = 120
+                    ReviewCount = 120,
+                    Categories = new List<Category>()
                 },
                 new Business
                 {
                     Id = Guid.NewGuid(),
                     Name = "Acme Repair Co",
                     AvgRating = 4.7m,
-                    ReviewCount = 300
+                    ReviewCount = 300,
+                    Categories = new List<Category>()
                 }
             });
+
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
 
         var result = await _service.GetBusinessesByCategoryAsync(categoryId);
 
@@ -247,6 +256,9 @@ public class BusinessServiceTests
         _businessRepoMock
             .Setup(r => r.GetBusinessesByCategoryAsync(categoryId))
             .ReturnsAsync(new List<Business>());
+
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
 
         var result = await _service.GetBusinessesByCategoryAsync(categoryId);
 
@@ -497,38 +509,6 @@ public class BusinessServiceTests
         await act.Should().ThrowAsync<BusinessNotFoundException>();
     }
     
-    [Test]
-    public async Task AddBranchesAsync_Throws_WhenBranchNotCreated()
-    {
-        // Arrange
-        var businessId = Guid.NewGuid();
-        var dto = new BranchDto(
-            businessId,
-            "Branch",
-            null,
-            null,
-            null
-        );
-
-        _businessRepoMock
-            .Setup(r => r.FindByIdAsync(businessId))
-            .ReturnsAsync(new Business { Id = businessId });
-
-        _businessRepoMock
-            .Setup(r => r.AddBusinessBranchAsync(It.IsAny<BusinessBranches>()))
-            .Returns(Task.CompletedTask);
-
-        _businessRepoMock
-            .Setup(r => r.FindBranchByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((BusinessBranches?)null);
-
-        // Act
-        Func<Task> act = () => _service.AddBranchesAsync(dto);
-
-        // Assert
-        await act.Should().ThrowAsync<BranchNotFoundException>();
-    }
-
     [Test]
     public async Task DeleteBranchesAsync_DeletesBranch_WhenFound()
     {

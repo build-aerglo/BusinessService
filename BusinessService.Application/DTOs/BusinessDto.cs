@@ -24,7 +24,7 @@ public record BusinessDto(
     string? ReviewLink,
     string? PreferredContactMethod,
     string[]? Highlights,
-    string[]? Tags,
+    List<TagDto>? Tags,
     string? AverageResponseTime,
     long ProfileClicks,
     List<FaqDto>? Faqs,
