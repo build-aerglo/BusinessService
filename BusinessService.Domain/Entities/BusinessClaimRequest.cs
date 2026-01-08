@@ -14,7 +14,7 @@ public class BusinessClaimRequest
     public string FullName { get; set; } = default!;
     public string Email { get; set; } = default!;
     public string PhoneNumber { get; set; } = default!;
-    public ClaimantRole Role { get; set; }
+    public string Role { get; set; } = default!;
 
     // Verification documents
     public string? CacNumber { get; set; }

@@ -25,13 +25,22 @@ public class BusinessService : IBusinessService
         _tagRepository = tagRepository;
     }
     
-    private static BusinessDto MapToDto(Business business)
+    private async Task<BusinessDto> MapToDto(Business business)
     {
         Dictionary<string, string>? openingHours = null;
         if (!string.IsNullOrWhiteSpace(business.OpeningHours))
         {
             openingHours = JsonSerializer.Deserialize<Dictionary<string, string>>(business.OpeningHours);
         }
+
+        // Convert tag names to TagDto objects
+        List<TagDto>? tagDtos = null;
+        if (business.Tags != null && business.Tags.Length > 0)
+        {
+            var tags = await _tagRepository.FindByNamesAsync(business.Tags);
+            tagDtos = tags.Select(t => new TagDto(t.Id, t.CategoryId, t.Name)).ToList();
+        }
+
         return new BusinessDto(
             business.Id,
             business.Name,
@@ -61,7 +70,7 @@ public class BusinessService : IBusinessService
             business.ReviewLink,
             business.PreferredContactMethod,
             business.Highlights,
-            business.Tags,
+            tagDtos,
             business.AverageResponseTime,
             business.ProfileClicks,
             business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
@@ -97,6 +106,7 @@ public class BusinessService : IBusinessService
         UpdatedAt = DateTime.UtcNow,
         Categories = categories,
         BusinessStatus = request.Status ?? "approved",
+        BusinessCityTown = request.BusinessCityTown,
     };
 
     // *** Generate the QR code content ***
@@ -106,7 +116,7 @@ public class BusinessService : IBusinessService
 
     await _repository.AddAsync(business);
 
-    var dto = MapToDto(business);
+    var dto = await MapToDto(business);
     await _searchProducer.PublishBusinessCreatedAsync(dto);
     return dto;
 }
@@ -116,50 +126,8 @@ public class BusinessService : IBusinessService
     {
         var business = await _repository.FindByIdAsync(id)
             ?? throw new BusinessNotFoundException($"Business {id} not found.");
-        
-        // Deserialize opening hours ONLY for API output
-        Dictionary<string, string>? openingHours = null;
-        if (!string.IsNullOrWhiteSpace(business.OpeningHours))
-        {
-            openingHours = JsonSerializer.Deserialize<Dictionary<string, string>>(business.OpeningHours);
-        }
 
-
-        return new BusinessDto(
-            business.Id,
-            business.Name,
-            business.Website,
-            business.IsBranch,
-            business.AvgRating,
-            business.ReviewCount,
-            business.ParentBusinessId,
-            business.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
-            business.BusinessAddress,
-            business.Logo,
-            openingHours,
-            business.BusinessEmail,
-            business.BusinessPhoneNumber,
-            business.CacNumber,
-            business.AccessUsername,
-            business.AccessNumber,
-            business.SocialMediaLinks,
-            business.BusinessDescription,
-            business.Media,
-            business.IsVerified,
-            business.ReviewLink,
-            business.PreferredContactMethod,
-            business.Highlights,
-            business.Tags,
-            business.AverageResponseTime,
-            business.ProfileClicks,
-            business.Faqs?.Select(f => new FaqDto(f.Question, f.Answer)).ToList(),
-            business.QrCodeBase64,
-            business.BusinessStatus,
-            business.BusinessStreet,
-            business.BusinessCityTown,
-            business.BusinessState,
-            business.ReviewSummary
-        );
+        return await MapToDto(business);
     }
 
     public async Task UpdateRatingsAsync(Guid businessId, decimal newAverage, long newCount)
@@ -262,8 +230,8 @@ public class BusinessService : IBusinessService
             throw new BusinessConflictException("The provided business email or access username is already in use.");
         }
         
-        var dto = MapToDto(business);
-        
+        var dto = await MapToDto(business);
+
         await _searchProducer.PublishBusinessUpdatedAsync(dto);
 
         return dto;
@@ -296,24 +264,37 @@ public class BusinessService : IBusinessService
 
         var businesses = await _repository.GetBusinessesByCategoryAsync(categoryId);
 
-        return businesses.Select(b => new BusinessSummaryResponseDto(
-            b.Id,
-            b.Name,
-            b.AvgRating,
-            b.ReviewCount,
-            b.IsBranch,
-            b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
-            b.BusinessAddress,
-            b.Logo,
-            b.BusinessPhoneNumber,
-            b.Tags,
-            b.ReviewSummary,
-            b.IsVerified,
-            b.BusinessStreet,
-            b.BusinessCityTown,
-            b.BusinessState
-            // b.ParentBusinessId
-        )).ToList();
+        var result = new List<BusinessSummaryResponseDto>();
+        foreach (var b in businesses)
+        {
+            // Convert tag names to TagDto objects
+            List<TagDto>? tagDtos = null;
+            if (b.Tags != null && b.Tags.Length > 0)
+            {
+                var tags = await _tagRepository.FindByNamesAsync(b.Tags);
+                tagDtos = tags.Select(t => new TagDto(t.Id, t.CategoryId, t.Name)).ToList();
+            }
+
+            result.Add(new BusinessSummaryResponseDto(
+                b.Id,
+                b.Name,
+                b.AvgRating,
+                b.ReviewCount,
+                b.IsBranch,
+                b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
+                b.BusinessAddress,
+                b.Logo,
+                b.BusinessPhoneNumber,
+                tagDtos,
+                b.ReviewSummary,
+                b.IsVerified,
+                b.BusinessStreet,
+                b.BusinessCityTown,
+                b.BusinessState
+            ));
+        }
+
+        return result;
     }
     public async Task<List<BusinessSummaryResponseDto>> GetBusinessesByTagAsync(Guid tagId)
     {
@@ -329,25 +310,37 @@ public class BusinessService : IBusinessService
         Console.WriteLine(businesses);
 
         // 3. Map to DTOs
-        return businesses.Select(b => new BusinessSummaryResponseDto(
-            b.Id,
-            b.Name,
-            b.AvgRating,
-            b.ReviewCount,
-            b.IsBranch,
-            b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
-            b.BusinessAddress,
-            b.Logo,
-            b.BusinessPhoneNumber,
-            b.Tags,
-            b.ReviewSummary,
-            b.IsVerified,
-            b.BusinessStreet,
-            b.BusinessCityTown,
-            b.BusinessState
-            // b.ParentBusinessId
-        )).ToList();
-        
+        var result = new List<BusinessSummaryResponseDto>();
+        foreach (var b in businesses)
+        {
+            // Convert tag names to TagDto objects
+            List<TagDto>? tagDtos = null;
+            if (b.Tags != null && b.Tags.Length > 0)
+            {
+                var tags = await _tagRepository.FindByNamesAsync(b.Tags);
+                tagDtos = tags.Select(t => new TagDto(t.Id, t.CategoryId, t.Name)).ToList();
+            }
+
+            result.Add(new BusinessSummaryResponseDto(
+                b.Id,
+                b.Name,
+                b.AvgRating,
+                b.ReviewCount,
+                b.IsBranch,
+                b.Categories.Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.ParentCategoryId)).ToList(),
+                b.BusinessAddress,
+                b.Logo,
+                b.BusinessPhoneNumber,
+                tagDtos,
+                b.ReviewSummary,
+                b.IsVerified,
+                b.BusinessStreet,
+                b.BusinessCityTown,
+                b.BusinessState
+            ));
+        }
+
+        return result;
     }
 
     private static Dictionary<string, string>? DeserializeOpeningHours(string? json)

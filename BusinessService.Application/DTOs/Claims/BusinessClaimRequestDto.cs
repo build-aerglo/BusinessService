@@ -13,7 +13,7 @@ public record BusinessClaimRequestDto(
     string FullName,
     string Email,
     string PhoneNumber,
-    ClaimantRole Role,
+    string Role,
     string RoleName,
     ClaimRequestStatus Status,
     string StatusName,
@@ -49,7 +49,7 @@ public class SubmitBusinessClaimRequest
     public string FullName { get; set; } = default!;
     public string Email { get; set; } = default!;
     public string PhoneNumber { get; set; } = default!;
-    public ClaimantRole Role { get; set; }
+    public string Role { get; set; } = default!;
     public string? CacNumber { get; set; }
     public string? CacDocumentUrl { get; set; }
     public string? IdDocumentUrl { get; set; }

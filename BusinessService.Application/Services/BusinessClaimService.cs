@@ -221,7 +221,7 @@ public class BusinessClaimService : IBusinessClaimService
             claim.Email,
             claim.PhoneNumber,
             claim.Role,
-            claim.Role.ToString(),
+            claim.Role,
             claim.Status,
             claim.Status.ToString(),
             claim.SubmittedAt,
