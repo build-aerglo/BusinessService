@@ -10,7 +10,7 @@ public record BusinessSummaryResponseDto(
     string? BusinessAddress,
     string? Logo,
     string? BusinessPhoneNumber,
-    string[]? Tags,
+    List<TagDto>? Tags,
     string? ReviewSummary,
     bool? IsVerified,
     string? BusinessStreet,

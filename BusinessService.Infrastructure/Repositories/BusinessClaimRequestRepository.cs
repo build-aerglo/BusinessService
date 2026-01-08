@@ -112,8 +112,23 @@ public class BusinessClaimRequestRepository : IBusinessClaimRequestRepository
 
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, claim);
+        
+        // update business status to in progress
+        await UpdateBusinessStatusAsync(claim.Id, "in_progress");
     }
 
+    private async Task UpdateBusinessStatusAsync(Guid id, string status)
+    {
+        const string sql = """
+                               UPDATE business
+                               SET business_status = @Status,
+                                   updated_at = now()
+                               WHERE id = @Id;
+                           """;
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new{id, status});
+    }
+    
     public async Task UpdateAsync(BusinessClaimRequest claim)
     {
         const string sql = """
