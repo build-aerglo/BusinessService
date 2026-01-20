@@ -383,9 +383,10 @@ public class BusinessService : IBusinessService
         
         var branch = new BusinessBranches{Id = Guid.NewGuid(), BusinessId = dto.BusinessId, BranchName = dto.BranchName, BranchStreet = dto.BranchStreet, BranchCityTown = dto.BranchCityTown, BranchState = dto.BranchState, BranchStatus = "active"};
         await _repository.AddBusinessBranchAsync(branch);
-
+        
+        _ = await _repository.FindBranchByIdAsync(branch.Id)
+                     ?? throw new BranchNotFoundException("Business branch not created.");
         return branch;
-
     }
     
     public async Task DeleteBranchesAsync(Guid id)

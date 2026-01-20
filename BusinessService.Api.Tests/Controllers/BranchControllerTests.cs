@@ -39,22 +39,11 @@ public class BranchControllerTests
             BranchCityTown: "City",
             BranchState: "State"
         );
-        
-        var createdBranch = new BusinessBranches
-        {
-            Id = Guid.NewGuid(),
-            BusinessId = dto.BusinessId,
-            BranchName = dto.BranchName,
-            BranchStreet = dto.BranchStreet,
-            BranchCityTown = dto.BranchCityTown,
-            BranchState = dto.BranchState,
-            BranchStatus = "active"
-        };
 
 
         _serviceMock
-            .Setup(s => s.AddBranchesAsync(dto))
-            .ReturnsAsync(createdBranch);
+            .Setup(s => s.AddBranchesAsync(It.IsAny<BranchDto>()))
+            .ReturnsAsync(new BusinessBranches());
 
         // Act
         var result = await _controller.CreateBranch(dto);
@@ -64,7 +53,7 @@ public class BranchControllerTests
         Assert.That(okResult, Is.Not.Null);
         Assert.That(okResult!.StatusCode, Is.EqualTo(200));
     }
-
+ 
     [Test]
     public async Task CreateBranch_ReturnsNotFound_WhenBusinessNotFound()
     {

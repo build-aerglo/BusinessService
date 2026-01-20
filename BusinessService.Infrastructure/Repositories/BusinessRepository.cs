@@ -502,7 +502,7 @@ public async Task UpdateProfileAsync(Business business)
     {
         const string sql = @"
             INSERT INTO business_branches (business_id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
-            VALUES (@BusinessId, @BranchName, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
+            VALUES (@BusinessId, @Name, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
         ";
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, new
@@ -531,7 +531,7 @@ public async Task UpdateProfileAsync(Business business)
     {
         const string sql = """
                                UPDATE business_branches
-                               SET branch_name = @BranchName,
+                               SET branch_name = @Name,
                                    branch_street = @BranchStreet,
                                    branch_citytown = @BranchCityTown,
                                    branch_state = @BranchState,
