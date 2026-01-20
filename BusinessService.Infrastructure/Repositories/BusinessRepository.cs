@@ -508,7 +508,7 @@ public async Task UpdateProfileAsync(Business business)
         await conn.ExecuteAsync(sql, new
         {
             branch.BusinessId,
-            branch.Name,
+            branch.BranchName,
             branch.BranchStreet,
             branch.BranchCityTown,
             branch.BranchState
@@ -542,7 +542,7 @@ public async Task UpdateProfileAsync(Business business)
         await conn.ExecuteAsync(sql, new
         {
             branch.Id,
-            branch.Name,
+            branch.BranchName,
             branch.BranchStreet,
             branch.BranchCityTown,
             branch.BranchState

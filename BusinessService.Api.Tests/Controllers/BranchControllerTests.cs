@@ -34,7 +34,7 @@ public class BranchControllerTests
         // Arrange
         var dto = new BranchDto(
             BusinessId: Guid.NewGuid(),
-            Name: "Main Branch",
+            BranchName: "Main Branch",
             BranchStreet: "123 Street",
             BranchCityTown: "City",
             BranchState: "State"
@@ -60,7 +60,7 @@ public class BranchControllerTests
         // Arrange
         var dto = new BranchDto(
             BusinessId: Guid.NewGuid(),
-            Name: "Main Branch",
+            BranchName: "Main Branch",
             BranchStreet: "123 Street",
             BranchCityTown: "City",
             BranchState: "State"
@@ -85,8 +85,8 @@ public class BranchControllerTests
         var id = Guid.NewGuid();
         var branches = new List<BusinessBranches>
         {
-            new BusinessBranches{Id = Guid.NewGuid(), BusinessId = Guid.NewGuid(), Name = "Branch Name", BranchStreet = null, BranchCityTown = null, BranchState = null, BranchStatus = "active"},
-            new BusinessBranches{Id = Guid.NewGuid(), BusinessId = Guid.NewGuid(), Name = "Branch Name Two", BranchStreet = null, BranchCityTown = null, BranchState = null, BranchStatus = "active"},
+            new BusinessBranches{Id = Guid.NewGuid(), BusinessId = Guid.NewGuid(), BranchName = "Branch Name", BranchStreet = null, BranchCityTown = null, BranchState = null, BranchStatus = "active"},
+            new BusinessBranches{Id = Guid.NewGuid(), BusinessId = Guid.NewGuid(), BranchName = "Branch Name Two", BranchStreet = null, BranchCityTown = null, BranchState = null, BranchStatus = "active"},
         };
 
         _serviceMock
@@ -160,7 +160,7 @@ public class BranchControllerTests
         var dto = new BranchUpdateDto(
             Id: Guid.NewGuid(),
             BusinessId: Guid.NewGuid(),
-            Name: "Main Branch",
+            BranchName: "Main Branch",
             BranchStreet: "123 Street",
             BranchCityTown: "City",
             BranchState: "State"
@@ -185,7 +185,7 @@ public class BranchControllerTests
         var dto = new BranchUpdateDto(
             Id: Guid.NewGuid(),
             BusinessId: Guid.NewGuid(),
-            Name: "Main Branch",
+            BranchName: "Main Branch",
             BranchStreet: "123 Street",
             BranchCityTown: "City",
             BranchState: "State");
