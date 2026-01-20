@@ -531,11 +531,11 @@ public async Task UpdateProfileAsync(Business business)
     {
         const string sql = """
                                UPDATE business_branches
-                               SET branch_name = @Name,
+                               SET branch_name = @BranchName,
                                    branch_street = @BranchStreet,
                                    branch_citytown = @BranchCityTown,
                                    branch_state = @BranchState,
-                                   updated_at = @UpdatedAt
+                                   updated_at = now()
                                WHERE id = @Id;
                            """;
         using var conn = _context.CreateConnection();
