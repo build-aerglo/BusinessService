@@ -42,8 +42,8 @@ public class BranchControllerTests
 
 
         _serviceMock
-            .Setup(s => s.AddBranchesAsync(dto))
-            .Returns(Task.CompletedTask);
+            .Setup(s => s.AddBranchesAsync(It.IsAny<BranchDto>()))
+            .ReturnsAsync(new BusinessBranches());
 
         // Act
         var result = await _controller.CreateBranch(dto);
@@ -53,7 +53,7 @@ public class BranchControllerTests
         Assert.That(okResult, Is.Not.Null);
         Assert.That(okResult!.StatusCode, Is.EqualTo(200));
     }
-
+ 
     [Test]
     public async Task CreateBranch_ReturnsNotFound_WhenBusinessNotFound()
     {

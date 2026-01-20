@@ -376,7 +376,7 @@ public class BusinessService : IBusinessService
         return await _repository.GetBusinessBranchesAsync(businessId);
     }
     
-    public async Task AddBranchesAsync(BranchDto dto)
+    public async Task<BusinessBranches> AddBranchesAsync(BranchDto dto)
     {
         _ = await _repository.FindByIdAsync(dto.BusinessId)
                        ?? throw new BusinessNotFoundException($"Business {dto.BusinessId} not found.");
@@ -386,7 +386,7 @@ public class BusinessService : IBusinessService
         
         _ = await _repository.FindBranchByIdAsync(branch.Id)
                      ?? throw new BranchNotFoundException("Business branch not created.");
-        
+        return branch;
     }
     
     public async Task DeleteBranchesAsync(Guid id)
