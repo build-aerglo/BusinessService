@@ -502,7 +502,7 @@ public async Task UpdateProfileAsync(Business business)
     {
         const string sql = @"
             INSERT INTO business_branches (business_id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
-            VALUES (@BusinessId, @Name, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
+            VALUES (@BusinessId, @BranchName, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
         ";
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, new
