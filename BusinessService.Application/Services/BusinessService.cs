@@ -199,7 +199,7 @@ public class BusinessService : IBusinessService
         business.AccessNumber = request.AccessNumber ?? business.AccessNumber;
         business.SocialMediaLinks = request.SocialMediaLinks ?? business.SocialMediaLinks;
         business.BusinessDescription = request.BusinessDescription ?? business.BusinessDescription;
-        business.Media = business.Media;
+        business.Media = request.Media != null ? new List<string>(request.Media) : business.Media;
         if (request.IsVerified.HasValue)
         {
             business.IsVerified = request.IsVerified.Value;
