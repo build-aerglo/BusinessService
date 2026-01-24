@@ -9,6 +9,8 @@ public class Business
     public string? Website { get; set; }
     public bool IsBranch { get; set; }
     public decimal AvgRating { get; set; } = 0.00m;
+    
+    public decimal? BayesianAverage { get; set; }
     public long ReviewCount { get; set; } = 0;
     public Guid? ParentBusinessId { get; set; }
     public Business? ParentBusiness { get; set; }

@@ -33,5 +33,6 @@ public record BusinessDto(
     string? BusinessStreet,
     string? BusinessCityTown,
     string? BusinessState,
-    string? ReviewSummary
+    string? ReviewSummary,
+    decimal? BayesianAverage
 );

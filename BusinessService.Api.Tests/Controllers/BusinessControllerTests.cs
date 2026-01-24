@@ -60,7 +60,8 @@ public class BusinessControllerTests
             null,
             null,
             null,
-            null
+            null,
+            4.92m
         );
     }
 

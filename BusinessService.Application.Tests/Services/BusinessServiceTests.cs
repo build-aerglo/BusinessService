@@ -1,4 +1,7 @@
-﻿using BusinessService.Application.DTOs;
+﻿// BusinessService.Application.Tests/Services/BusinessServiceTests.cs
+// ✅ FIXED: Nullable decimal issues
+
+using BusinessService.Application.DTOs;
 using BusinessService.Application.Interfaces;
 using BusinessService.Application.Services;
 using BusinessService.Domain.Entities;
@@ -30,7 +33,6 @@ public class BusinessServiceTests
         _searchProducerMock = new Mock<IBusinessSearchProducer>();
         _tagRepoMock = new Mock<ITagRepository>();
 
-        // Always return a fixed Base64 encoded QR code for predictable tests
         _qrCodeServiceMock.Setup(q => q.GenerateQrCodeBase64(It.IsAny<string>()))
             .Returns("BASE64_QR_CODE_TEST_VALUE");
 
@@ -41,12 +43,8 @@ public class BusinessServiceTests
             _searchProducerMock.Object,
             _tagRepoMock.Object
         );
-        
     }
 
-    // ---------------------------------------------------------
-    // CREATE BUSINESS TESTS
-    // ---------------------------------------------------------
     [Test]
     public async Task CreateBusinessAsync_ShouldCreateBusiness_WhenValid()
     {
@@ -67,16 +65,16 @@ public class BusinessServiceTests
 
         var result = await _service.CreateBusinessAsync(request);
 
-        // Assertions
         result.Should().NotBeNull();
         result.Name.Should().Be("Alpha Coffee");
         result.Categories.Should().ContainSingle(c => c.Name == "Coffee");
         result.QrCodeBase64.Should().Be("BASE64_QR_CODE_TEST_VALUE");
+        
+        // ✅ FIXED: BayesianAverage should be null for new business (no reviews yet)
+        result.BayesianAverage.Should().BeNull();
 
         _businessRepoMock.Verify(r => r.AddAsync(It.IsAny<Business>()), Times.Once);
         _qrCodeServiceMock.Verify(q => q.GenerateQrCodeBase64(It.IsAny<string>()), Times.Once);
-
-        // NEW: Ensure Search Service is notified
         _searchProducerMock.Verify(s => s.PublishBusinessCreatedAsync(It.IsAny<BusinessDto>()), Times.Once);
     }
 
@@ -109,8 +107,6 @@ public class BusinessServiceTests
         };
 
         _businessRepoMock.Setup(r => r.ExistsByNameAsync(request.Name)).ReturnsAsync(false);
-
-        // return only 1 category even though request has 2 → triggers error
         _categoryRepoMock.Setup(r => r.FindAllByIdsAsync(request.CategoryIds))
             .ReturnsAsync(new List<Category> { new Category { Id = request.CategoryIds[0] } });
 
@@ -120,15 +116,71 @@ public class BusinessServiceTests
             .WithMessage("One or more categories not found.");
     }
 
-    // ---------------------------------------------------------
-    // UPDATE BUSINESS TESTS
-    // ---------------------------------------------------------
+    [Test]
+    public async Task GetBusinessAsync_ShouldReturnBusinessWithBayesianAverage_WhenBusinessHasReviews()
+    {
+        var businessId = Guid.NewGuid();
+        var business = new Business
+        {
+            Id = businessId,
+            Name = "Test Business",
+            AvgRating = 4.20m,
+            ReviewCount = 15,
+            BayesianAverage = 4.12m, // ✅ Populated from LEFT JOIN
+            Categories = new List<Category>()
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        var result = await _service.GetBusinessAsync(businessId);
+
+        result.Should().NotBeNull();
+        result.AvgRating.Should().Be(4.20m);
+        result.ReviewCount.Should().Be(15);
+        result.BayesianAverage.Should().Be(4.12m); // ✅ Verify Bayesian is returned
+    }
+
+    [Test]
+    public async Task GetBusinessAsync_ShouldReturnBusinessWithNullBayesianAverage_WhenBusinessHasNoReviews()
+    {
+        var businessId = Guid.NewGuid();
+        var business = new Business
+        {
+            Id = businessId,
+            Name = "New Business",
+            AvgRating = 0,
+            ReviewCount = 0,
+            BayesianAverage = null, // ✅ NULL when no reviews (LEFT JOIN returns null)
+            Categories = new List<Category>()
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        var result = await _service.GetBusinessAsync(businessId);
+
+        result.Should().NotBeNull();
+        result.AvgRating.Should().Be(0);
+        result.ReviewCount.Should().Be(0);
+        result.BayesianAverage.Should().BeNull(); // ✅ NULL is valid
+    }
+
     [Test]
     public async Task UpdateBusinessAsync_ShouldUpdateBusiness_WhenValid()
     {
         var id = Guid.NewGuid();
         var request = new UpdateBusinessRequest { Name = "Updated Name" };
-        var business = new Business { Id = id, Name = "Old Name" };
+        var business = new Business 
+        { 
+            Id = id, 
+            Name = "Old Name",
+            BayesianAverage = 3.85m // ✅ Business may have existing rating
+        };
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
         _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
@@ -138,13 +190,10 @@ public class BusinessServiceTests
 
         result.Should().NotBeNull();
         result.Name.Should().Be("Updated Name");
+        result.BayesianAverage.Should().Be(3.85m); // ✅ Rating preserved
 
         _businessRepoMock.Verify(r => r.UpdateProfileAsync(It.Is<Business>(b => b.Name == "Updated Name")), Times.Once);
-
-        // QR code should NOT regenerate during update
         _qrCodeServiceMock.Verify(q => q.GenerateQrCodeBase64(It.IsAny<string>()), Times.Never);
-
-        // NEW: Ensure Search Service update is called
         _searchProducerMock.Verify(s => s.PublishBusinessUpdatedAsync(It.IsAny<BusinessDto>()), Times.Once);
     }
 
@@ -170,7 +219,6 @@ public class BusinessServiceTests
         var business = new Business { Id = id, Name = "Old Name" };
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
-
         _businessRepoMock.Setup(r => r.UpdateProfileAsync(It.IsAny<Business>()))
             .ThrowsAsync(new PostgresException("msg", "severity", "23505", "detail"));
 
@@ -178,6 +226,44 @@ public class BusinessServiceTests
 
         act.Should().ThrowAsync<BusinessConflictException>()
             .WithMessage("The provided business email or access username is already in use.");
+    }
+
+    [Test]
+    public async Task UpdateRatingsAsync_ShouldUpdateBusinessRatings_AndPublishEvent()
+    {
+        var businessId = Guid.NewGuid();
+        var business = new Business
+        {
+            Id = businessId,
+            Name = "Test Business",
+            AvgRating = 3.5m,
+            ReviewCount = 10,
+            BayesianAverage = 3.44m,
+            Categories = new List<Category>()
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
+            .ReturnsAsync(business);
+        _businessRepoMock.Setup(r => r.UpdateRatingsAsync(It.IsAny<Business>()))
+            .Returns(Task.CompletedTask);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        await _service.UpdateRatingsAsync(businessId, 4.2m, 15);
+
+        _businessRepoMock.Verify(r => r.UpdateRatingsAsync(
+            It.Is<Business>(b => 
+                b.Id == businessId && 
+                b.AvgRating == 4.2m && 
+                b.ReviewCount == 15)
+        ), Times.Once);
+
+        _searchProducerMock.Verify(s => s.PublishBusinessUpdatedAsync(
+            It.Is<BusinessDto>(dto => 
+                dto.Id == businessId &&
+                dto.AvgRating == 4.2m &&
+                dto.ReviewCount == 15)
+        ), Times.Once);
     }
     
     [Test]
@@ -216,6 +302,7 @@ public class BusinessServiceTests
                     Name = "FixIt Hub",
                     AvgRating = 4.2m,
                     ReviewCount = 120,
+                    BayesianAverage = 4.15m,
                     Categories = new List<Category>()
                 },
                 new Business
@@ -224,6 +311,7 @@ public class BusinessServiceTests
                     Name = "Acme Repair Co",
                     AvgRating = 4.7m,
                     ReviewCount = 300,
+                    BayesianAverage = 4.68m,
                     Categories = new List<Category>()
                 }
             });
@@ -235,7 +323,6 @@ public class BusinessServiceTests
 
         result.Should().NotBeNull();
         result.Count.Should().Be(2);
-
         result[0].Name.Should().Be("FixIt Hub");
         result[1].AvgRating.Should().Be(4.7m);
     }
@@ -266,12 +353,9 @@ public class BusinessServiceTests
         result.Should().BeEmpty();
     }
     
-    // business claim tests
-
     [Test]
     public async Task ClaimBusinessAsync_ShouldClaimBusiness_WhenBusinessExistsAndNotClaimed()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
         var dto = new BusinessClaimsDto
         (
@@ -291,14 +375,11 @@ public class BusinessServiceTests
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
             .ReturnsAsync(business);
-
         _businessRepoMock.Setup(r => r.ClaimAsync(It.IsAny<BusinessClaims>()))
             .Returns(Task.CompletedTask);
 
-        // Act
         await _service.ClaimBusinessAsync(dto);
 
-        // Assert
         _businessRepoMock.Verify(r => r.FindByIdAsync(businessId), Times.Once);
         _businessRepoMock.Verify(r => r.ClaimAsync(It.Is<BusinessClaims>(c =>
             c.Id == businessId &&
@@ -312,7 +393,6 @@ public class BusinessServiceTests
     [Test]
     public void ClaimBusinessAsync_ShouldThrowBusinessNotFoundException_WhenBusinessDoesNotExist()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
         var dto = new BusinessClaimsDto
         (
@@ -324,22 +404,18 @@ public class BusinessServiceTests
         );
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
-            .ReturnsAsync((Business)null);
+            .ReturnsAsync((Business?)null);
 
-        // Act
         Func<Task> act = async () => await _service.ClaimBusinessAsync(dto);
 
-        // Assert
         act.Should().ThrowAsync<BusinessNotFoundException>()
             .WithMessage($"Business {businessId} not found.");
-
         _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
     }
 
     [Test]
     public void ClaimBusinessAsync_ShouldThrowBusinessConflictException_WhenBusinessIsApproved()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
         var dto = new BusinessClaimsDto
         (
@@ -360,20 +436,16 @@ public class BusinessServiceTests
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
             .ReturnsAsync(business);
 
-        // Act
         Func<Task> act = async () => await _service.ClaimBusinessAsync(dto);
 
-        // Assert
         act.Should().ThrowAsync<BusinessConflictException>()
             .WithMessage("Business already approved.");
-
         _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
     }
 
     [Test]
     public void ClaimBusinessAsync_ShouldThrowBusinessConflictException_WhenBusinessIsInProgress()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
         var dto = new BusinessClaimsDto
         (
@@ -394,21 +466,16 @@ public class BusinessServiceTests
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId))
             .ReturnsAsync(business);
 
-        // Act
         Func<Task> act = async () => await _service.ClaimBusinessAsync(dto);
 
-        // Assert
         act.Should().ThrowAsync<BusinessConflictException>()
             .WithMessage("Business approval in progress.");
-
         _businessRepoMock.Verify(r => r.ClaimAsync(It.IsAny<BusinessClaims>()), Times.Never);
     }
     
-    // branches
     [Test]
     public async Task GetBusinessBranchesAsync_ReturnsBranches_WhenBusinessExists()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
         var business = new Business { Id = businessId };
 
@@ -420,39 +487,32 @@ public class BusinessServiceTests
         _businessRepoMock
             .Setup(r => r.FindByIdAsync(businessId))
             .ReturnsAsync(business);
-
         _businessRepoMock
             .Setup(r => r.GetBusinessBranchesAsync(businessId))
             .ReturnsAsync(branches);
 
-        // Act
         var result = await _service.GetBusinessBranchesAsync(businessId);
 
-        // Assert
         result.Should().BeEquivalentTo(branches);
     }
 
     [Test]
     public async Task GetBusinessBranchesAsync_Throws_WhenBusinessNotFound()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
 
         _businessRepoMock
             .Setup(r => r.FindByIdAsync(businessId))
             .ReturnsAsync((Business?)null);
 
-        // Act
         Func<Task> act = () => _service.GetBusinessBranchesAsync(businessId);
 
-        // Assert
         await act.Should().ThrowAsync<BusinessNotFoundException>();
     }
     
     [Test]
     public async Task AddBranchesAsync_AddsBranch_WhenBusinessExists()
     {
-        // Arrange
         var businessId = Guid.NewGuid();
         var dto = new BranchDto(
             businessId,
@@ -465,19 +525,15 @@ public class BusinessServiceTests
         _businessRepoMock
             .Setup(r => r.FindByIdAsync(businessId))
             .ReturnsAsync(new Business { Id = businessId });
-
         _businessRepoMock
             .Setup(r => r.AddBusinessBranchAsync(It.IsAny<BusinessBranches>()))
             .Returns(Task.CompletedTask);
-
         _businessRepoMock
             .Setup(r => r.FindBranchByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(new BusinessBranches());
 
-        // Act
         await _service.AddBranchesAsync(dto);
 
-        // Assert
         _businessRepoMock.Verify(
             r => r.AddBusinessBranchAsync(It.Is<BusinessBranches>(
                 b => b.BusinessId == businessId && b.BranchName == dto.BranchName
@@ -489,7 +545,6 @@ public class BusinessServiceTests
     [Test]
     public async Task AddBranchesAsync_Throws_WhenBusinessNotFound()
     {
-        // Arrange
         var dto = new BranchDto(
             Guid.NewGuid(),
             "Branch",
@@ -502,31 +557,25 @@ public class BusinessServiceTests
             .Setup(r => r.FindByIdAsync(dto.BusinessId))
             .ReturnsAsync((Business?)null);
 
-        // Act
         Func<Task> act = () => _service.AddBranchesAsync(dto);
 
-        // Assert
         await act.Should().ThrowAsync<BusinessNotFoundException>();
     }
     
     [Test]
     public async Task DeleteBranchesAsync_DeletesBranch_WhenFound()
     {
-        // Arrange
         var branchId = Guid.NewGuid();
 
         _businessRepoMock
             .Setup(r => r.FindBranchByIdAsync(branchId))
             .ReturnsAsync(new BusinessBranches { Id = branchId });
-
         _businessRepoMock
             .Setup(r => r.DeleteBusinessBranchAsync(branchId))
             .Returns(Task.CompletedTask);
 
-        // Act
         await _service.DeleteBranchesAsync(branchId);
 
-        // Assert
         _businessRepoMock.Verify(
             r => r.DeleteBusinessBranchAsync(branchId),
             Times.Once
@@ -536,24 +585,20 @@ public class BusinessServiceTests
     [Test]
     public async Task DeleteBranchesAsync_Throws_WhenBranchNotFound()
     {
-        // Arrange
         var branchId = Guid.NewGuid();
 
         _businessRepoMock
             .Setup(r => r.FindBranchByIdAsync(branchId))
             .ReturnsAsync((BusinessBranches?)null);
 
-        // Act
         Func<Task> act = () => _service.DeleteBranchesAsync(branchId);
 
-        // Assert
         await act.Should().ThrowAsync<BranchNotFoundException>();
     }
     
     [Test]
     public async Task UpdateBranchesAsync_UpdatesAndReturnsBranch_WhenFound()
     {
-        // Arrange
         var dto = new BranchUpdateDto(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -572,22 +617,18 @@ public class BusinessServiceTests
         _businessRepoMock
             .Setup(r => r.FindBranchByIdAsync(dto.Id))
             .ReturnsAsync(branch);
-
         _businessRepoMock
             .Setup(r => r.UpdateBusinessBranchAsync(branch))
             .Returns(Task.CompletedTask);
 
-        // Act
         var result = await _service.UpdateBranchesAsync(dto);
 
-        // Assert
         result.BranchName.Should().Be("Updated Name");
     }
     
     [Test]
     public async Task UpdateBranchesAsync_Throws_WhenBranchNotFound()
     {
-        // Arrange
         var dto = new BranchUpdateDto(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -601,12 +642,8 @@ public class BusinessServiceTests
             .Setup(r => r.FindBranchByIdAsync(dto.Id))
             .ReturnsAsync((BusinessBranches?)null);
 
-        // Act
         Func<Task> act = () => _service.UpdateBranchesAsync(dto);
 
-        // Assert
         await act.Should().ThrowAsync<BranchNotFoundException>();
     }
-
 }
-
