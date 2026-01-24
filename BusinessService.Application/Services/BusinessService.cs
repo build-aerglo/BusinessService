@@ -79,7 +79,8 @@ public class BusinessService : IBusinessService
             business.BusinessStreet,
             business.BusinessCityTown,
             business.BusinessState,
-            business.ReviewSummary
+            business.ReviewSummary,
+            business.BayesianAverage
         );
     }
 
@@ -133,13 +134,16 @@ public class BusinessService : IBusinessService
     public async Task UpdateRatingsAsync(Guid businessId, decimal newAverage, long newCount)
     {
         var business = await _repository.FindByIdAsync(businessId)
-            ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
+                       ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
 
         business.AvgRating = newAverage;
         business.ReviewCount = newCount;
         business.UpdatedAt = DateTime.UtcNow;
 
         await _repository.UpdateRatingsAsync(business);
+        
+        var dto = await MapToDto(business);
+        await _searchProducer.PublishBusinessUpdatedAsync(dto);
 
         if (business.ParentBusinessId.HasValue)
             await RecalculateParentRatingAsync(business.ParentBusinessId.Value);

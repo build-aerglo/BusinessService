@@ -214,14 +214,19 @@ public async Task ClaimAsync(BusinessClaims claim)
     public async Task<Business?> FindByIdAsync(Guid id)
     {
         const string sql = """
-            SELECT * FROM business WHERE id = @id;
-        """;
+                               SELECT 
+                                   b.*,
+                                   br.bayesian_average as BayesianAverage  
+                               FROM business b
+                               LEFT JOIN business_rating br ON b.id = br.business_id  
+                               WHERE b.id = @id;
+                           """;
 
         const string categorySql = """
-            SELECT c.* FROM category c
-            INNER JOIN business_category bc ON bc.category_id = c.id
-            WHERE bc.business_id = @id;
-        """;
+                                       SELECT c.* FROM category c
+                                       INNER JOIN business_category bc ON bc.category_id = c.id
+                                       WHERE bc.business_id = @id;
+                                   """;
 
         using var conn = _context.CreateConnection();
         var business = await conn.QuerySingleOrDefaultAsync<Business>(sql, new { id });
@@ -390,16 +395,17 @@ public async Task UpdateProfileAsync(Business business)
     public async Task<List<Business>> GetBusinessesByCategoryAsync(Guid categoryId)
     {
         const string businessSql = """
-                                       SELECT DISTINCT b.*
+                                       SELECT DISTINCT 
+                                           b.*,
+                                           br.bayesian_average as BayesianAverage  
                                        FROM business b
                                        INNER JOIN business_category bc ON bc.business_id = b.id
+                                       LEFT JOIN business_rating br ON b.id = br.business_id  
                                        WHERE bc.category_id = @categoryId;
                                    """;
 
         const string categorySql = """
-                                       SELECT
-                                           bc.business_id,
-                                           c.*
+                                       SELECT bc.business_id, c.*
                                        FROM category c
                                        INNER JOIN business_category bc ON bc.category_id = c.id
                                        WHERE bc.business_id = ANY(@businessIds);
@@ -407,7 +413,6 @@ public async Task UpdateProfileAsync(Business business)
 
         using var conn = _context.CreateConnection();
 
-        // 1. Load businesses
         var businesses = (await conn.QueryAsync<Business>(
             businessSql,
             new { categoryId }
@@ -416,7 +421,6 @@ public async Task UpdateProfileAsync(Business business)
         if (!businesses.Any())
             return businesses;
 
-        // 2. Load categories for all businesses in one query
         var businessIds = businesses.Select(b => b.Id).ToArray();
 
         var categoryLookup = new Dictionary<Guid, List<Category>>();
@@ -435,11 +439,9 @@ public async Task UpdateProfileAsync(Business business)
                 list = new List<Category>();
                 categoryLookup[businessId] = list;
             }
-
             list.Add(category);
         }
 
-        // 3. Attach categories
         foreach (var business in businesses)
         {
             business.Categories = categoryLookup.TryGetValue(business.Id, out var cats)
@@ -456,11 +458,13 @@ public async Task UpdateProfileAsync(Business business)
         const string sql = """
                                SELECT
                                    b.*,
+                                   br.bayesian_average as BayesianAverage, 
                                    c.id,
                                    c.name
                                FROM business b
                                JOIN business_category bc ON bc.business_id = b.id
                                JOIN category c ON c.id = bc.category_id
+                               LEFT JOIN business_rating br ON b.id = br.business_id  
                                WHERE c.id = @categoryId;
                            """;
 
