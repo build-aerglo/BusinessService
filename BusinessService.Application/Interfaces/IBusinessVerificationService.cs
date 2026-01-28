@@ -8,6 +8,7 @@ public interface IBusinessVerificationService
     Task<BusinessVerificationDto> GetVerificationStatusAsync(Guid businessId);
     Task<BusinessVerificationDto> CreateVerificationAsync(Guid businessId);
     Task<BusinessVerificationDto> VerifyRequirementAsync(VerifyRequirementRequest request);
+    Task SubmitIdVerificationAsync(SubmitIdVerificationRequest request);
     Task<VerificationStatusResponse> GetDetailedStatusAsync(Guid businessId);
     Task TriggerReverificationAsync(Guid businessId, string reason);
     Task CompleteReverificationAsync(Guid businessId);

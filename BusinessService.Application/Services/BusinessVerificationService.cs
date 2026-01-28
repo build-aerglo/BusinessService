@@ -115,6 +115,38 @@ public class BusinessVerificationService : IBusinessVerificationService
         return MapToDto(verification);
     }
 
+    public async Task SubmitIdVerificationAsync(SubmitIdVerificationRequest request)
+    {
+        var business = await _businessRepository.FindByIdAsync(request.BusinessId);
+        if (business == null)
+            throw new BusinessNotFoundException($"Business with ID {request.BusinessId} not found");
+
+        // Ensure business_verification entry exists
+        var verification = await _verificationRepository.FindByBusinessIdAsync(request.BusinessId);
+        if (verification == null)
+        {
+            verification = new BusinessVerification
+            {
+                Id = Guid.NewGuid(),
+                BusinessId = request.BusinessId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _verificationRepository.AddAsync(verification);
+        }
+
+        // Update business_verification: id_verified = false, id_verification_status = 'pending'
+        await _verificationRepository.UpdateIdVerificationStatusAsync(request.BusinessId, false, "pending");
+
+        // Update business: id_verified = false, id_verification_url, id_verification_type, id_verification_number
+        await _businessRepository.UpdateIdVerificationAsync(
+            request.BusinessId,
+            request.IdVerificationUrl,
+            request.IdVerificationType,
+            request.IdVerificationNumber
+        );
+    }
+
     public async Task<VerificationStatusResponse> GetDetailedStatusAsync(Guid businessId)
     {
         var verification = await _verificationRepository.FindByBusinessIdAsync(businessId);
@@ -209,6 +241,8 @@ public class BusinessVerificationService : IBusinessVerificationService
             v.PhoneVerified,
             v.EmailVerified,
             v.AddressVerified,
+            v.IdVerified,
+            v.IdVerificationStatus,
             v.OnlinePresenceVerified,
             v.OtherIdsVerified,
             v.BusinessDomainEmailVerified,

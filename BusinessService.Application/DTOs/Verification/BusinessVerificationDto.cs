@@ -18,6 +18,10 @@ public record BusinessVerificationDto(
     bool EmailVerified,
     bool AddressVerified,
 
+    // ID Verification
+    bool IdVerified,
+    string? IdVerificationStatus,
+
     // Verified requirements
     bool OnlinePresenceVerified,
     bool OtherIdsVerified,
@@ -45,8 +49,20 @@ public class VerifyRequirementRequest
 {
     public Guid BusinessId { get; set; }
     public VerificationRequirementType RequirementType { get; set; }
+    public string? Name { get; set; }
     public string? Value { get; set; }
     public string? DocumentUrl { get; set; }
+}
+
+/// <summary>
+/// Request to submit ID verification (CAC, TIN, etc.)
+/// </summary>
+public class SubmitIdVerificationRequest
+{
+    public Guid BusinessId { get; set; }
+    public string IdVerificationType { get; set; } = default!;
+    public string IdVerificationNumber { get; set; } = default!;
+    public string IdVerificationUrl { get; set; } = default!;
 }
 
 /// <summary>

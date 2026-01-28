@@ -33,5 +33,7 @@ public record BusinessDto(
     string? BusinessStreet,
     string? BusinessCityTown,
     string? BusinessState,
-    string? ReviewSummary
+    string? ReviewSummary,
+    bool IdVerified,
+    string? IdVerificationType
 );

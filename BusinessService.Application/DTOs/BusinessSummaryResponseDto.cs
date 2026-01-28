@@ -15,5 +15,7 @@ public record BusinessSummaryResponseDto(
     bool? IsVerified,
     string? BusinessStreet,
     string? BusinessCityTown,
-    string? BusinessState
+    string? BusinessState,
+    bool IdVerified,
+    string? IdVerificationType
     );

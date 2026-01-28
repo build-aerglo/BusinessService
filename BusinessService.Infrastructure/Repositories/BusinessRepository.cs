@@ -58,6 +58,10 @@ public async Task AddAsync(Business business)
             business_street,
             business_citytown,
             business_state,
+            id_verified,
+            id_verification_url,
+            id_verification_type,
+            id_verification_number,
             created_at,
             updated_at
         )
@@ -93,6 +97,10 @@ public async Task AddAsync(Business business)
             @BusinessStreet,
             @BusinessCityTown,
             @BusinessState,
+            @IdVerified,
+            @IdVerificationUrl,
+            @IdVerificationType,
+            @IdVerificationNumber,
             @CreatedAt,
             @UpdatedAt
         );
@@ -153,6 +161,10 @@ public async Task AddAsync(Business business)
         business.BusinessStreet,
         business.BusinessCityTown,
         business.BusinessState,
+        business.IdVerified,
+        business.IdVerificationUrl,
+        business.IdVerificationType,
+        business.IdVerificationNumber,
         business.CreatedAt,
         business.UpdatedAt
     });
@@ -560,5 +572,28 @@ public async Task UpdateProfileAsync(Business business)
         if (branch == null) return null;
 
         return branch;
+    }
+
+    public async Task UpdateIdVerificationAsync(Guid businessId, string idVerificationUrl, string idVerificationType, string idVerificationNumber)
+    {
+        const string sql = """
+                               UPDATE business
+                               SET id_verified = false,
+                                   id_verification_url = @IdVerificationUrl,
+                                   id_verification_type = @IdVerificationType,
+                                   id_verification_number = @IdVerificationNumber,
+                                   updated_at = @UpdatedAt
+                               WHERE id = @BusinessId;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            BusinessId = businessId,
+            IdVerificationUrl = idVerificationUrl,
+            IdVerificationType = idVerificationType,
+            IdVerificationNumber = idVerificationNumber,
+            UpdatedAt = DateTime.UtcNow
+        });
     }
 }
