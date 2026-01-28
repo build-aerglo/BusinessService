@@ -20,7 +20,8 @@ public class BusinessServiceTests
     private Mock<IBusinessSearchProducer> _searchProducerMock = null!;
     private Application.Services.BusinessService _service = null!;
     private Mock<ITagRepository> _tagRepoMock = null!;
-    
+    private Mock<IBusinessVerificationRepository> _verificationRepoMock = null!;
+
     [SetUp]
     public void Setup()
     {
@@ -29,6 +30,7 @@ public class BusinessServiceTests
         _qrCodeServiceMock = new Mock<IQrCodeService>();
         _searchProducerMock = new Mock<IBusinessSearchProducer>();
         _tagRepoMock = new Mock<ITagRepository>();
+        _verificationRepoMock = new Mock<IBusinessVerificationRepository>();
 
         // Always return a fixed Base64 encoded QR code for predictable tests
         _qrCodeServiceMock.Setup(q => q.GenerateQrCodeBase64(It.IsAny<string>()))
@@ -39,9 +41,10 @@ public class BusinessServiceTests
             _categoryRepoMock.Object,
             _qrCodeServiceMock.Object,
             _searchProducerMock.Object,
-            _tagRepoMock.Object
+            _tagRepoMock.Object,
+            _verificationRepoMock.Object
         );
-        
+
     }
 
     // ---------------------------------------------------------
@@ -606,6 +609,163 @@ public class BusinessServiceTests
 
         // Assert
         await act.Should().ThrowAsync<BranchNotFoundException>();
+    }
+
+    // ---------------------------------------------------------
+    // VERIFICATION INTEGRATION TESTS
+    // ---------------------------------------------------------
+    [Test]
+    public async Task CreateBusinessAsync_ShouldCreateVerificationEntry_WhenBusinessIsCreated()
+    {
+        // Arrange
+        var request = new CreateBusinessRequest
+        {
+            Name = "Verified Biz",
+            Website = "https://verifiedbiz.com",
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
+        };
+
+        var category = new Category { Id = request.CategoryIds[0], Name = "Tech" };
+
+        _businessRepoMock.Setup(r => r.ExistsByNameAsync(request.Name)).ReturnsAsync(false);
+        _categoryRepoMock.Setup(r => r.FindAllByIdsAsync(request.CategoryIds))
+            .ReturnsAsync(new List<Category> { category });
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        // Act
+        var result = await _service.CreateBusinessAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        _verificationRepoMock.Verify(r => r.AddAsync(It.Is<BusinessVerification>(
+            v => v.BusinessId == result.Id
+        )), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateBusinessAsync_ShouldResetPhoneVerification_WhenPhoneNumberChanges()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { BusinessPhoneNumber = "+1234567890" };
+        var business = new Business
+        {
+            Id = id,
+            Name = "Test Biz",
+            BusinessPhoneNumber = "+0987654321" // Different phone number
+        };
+        var verification = new BusinessVerification
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = id,
+            PhoneVerified = true,
+            EmailVerified = true
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
+        _verificationRepoMock.Setup(r => r.FindByBusinessIdAsync(id)).ReturnsAsync(verification);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        // Act
+        await _service.UpdateBusinessAsync(id, request);
+
+        // Assert
+        _verificationRepoMock.Verify(r => r.UpdatePhoneAndEmailVerificationAsync(
+            id,
+            false,  // phoneVerified should be false
+            true,   // emailVerified should remain true
+            "+1234567890"
+        ), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateBusinessAsync_ShouldResetEmailVerification_WhenEmailChanges()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { BusinessEmail = "new@example.com" };
+        var business = new Business
+        {
+            Id = id,
+            Name = "Test Biz",
+            BusinessEmail = "old@example.com" // Different email
+        };
+        var verification = new BusinessVerification
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = id,
+            PhoneVerified = true,
+            EmailVerified = true
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
+        _verificationRepoMock.Setup(r => r.FindByBusinessIdAsync(id)).ReturnsAsync(verification);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        // Act
+        await _service.UpdateBusinessAsync(id, request);
+
+        // Assert
+        _verificationRepoMock.Verify(r => r.UpdatePhoneAndEmailVerificationAsync(
+            id,
+            true,   // phoneVerified should remain true
+            false,  // emailVerified should be false
+            null    // phone number not changed
+        ), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateBusinessAsync_ShouldNotResetVerification_WhenPhoneAndEmailUnchanged()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var request = new UpdateBusinessRequest { Name = "Updated Name" };
+        var business = new Business { Id = id, Name = "Old Name" };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        // Act
+        await _service.UpdateBusinessAsync(id, request);
+
+        // Assert
+        _verificationRepoMock.Verify(r => r.UpdatePhoneAndEmailVerificationAsync(
+            It.IsAny<Guid>(),
+            It.IsAny<bool>(),
+            It.IsAny<bool>(),
+            It.IsAny<string?>()
+        ), Times.Never);
+    }
+
+    [Test]
+    public async Task UpdateBusinessAsync_ShouldNotUpdateEmail_WhenEmailProvided()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var originalEmail = "original@example.com";
+        var request = new UpdateBusinessRequest { BusinessEmail = "new@example.com" };
+        var business = new Business
+        {
+            Id = id,
+            Name = "Test Biz",
+            BusinessEmail = originalEmail
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(id)).ReturnsAsync(business);
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        // Act
+        await _service.UpdateBusinessAsync(id, request);
+
+        // Assert - email should remain unchanged (email update is disabled)
+        _businessRepoMock.Verify(r => r.UpdateProfileAsync(It.Is<Business>(
+            b => b.BusinessEmail == originalEmail
+        )), Times.Once);
     }
 
 }
