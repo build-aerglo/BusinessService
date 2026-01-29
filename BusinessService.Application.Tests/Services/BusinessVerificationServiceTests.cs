@@ -14,6 +14,7 @@ public class BusinessVerificationServiceTests
 {
     private Mock<IBusinessVerificationRepository> _verificationRepoMock = null!;
     private Mock<IBusinessRepository> _businessRepoMock = null!;
+    private Mock<IIdVerificationRequestRepository> _idVerificationRequestRepoMock = null!;
     private BusinessVerificationService _service = null!;
 
     [SetUp]
@@ -21,10 +22,12 @@ public class BusinessVerificationServiceTests
     {
         _verificationRepoMock = new Mock<IBusinessVerificationRepository>();
         _businessRepoMock = new Mock<IBusinessRepository>();
+        _idVerificationRequestRepoMock = new Mock<IIdVerificationRequestRepository>();
 
         _service = new BusinessVerificationService(
             _verificationRepoMock.Object,
-            _businessRepoMock.Object
+            _businessRepoMock.Object,
+            _idVerificationRequestRepoMock.Object
         );
     }
 
@@ -32,7 +35,7 @@ public class BusinessVerificationServiceTests
     // SUBMIT ID VERIFICATION TESTS
     // ---------------------------------------------------------
     [Test]
-    public async Task SubmitIdVerificationAsync_ShouldUpdateVerificationStatus_WhenBusinessExists()
+    public async Task SubmitIdVerificationAsync_ShouldInsertRequest_WhenBusinessExists()
     {
         // Arrange
         var businessId = Guid.NewGuid();
@@ -41,41 +44,36 @@ public class BusinessVerificationServiceTests
             BusinessId = businessId,
             IdVerificationType = "CAC",
             IdVerificationNumber = "RC123456",
-            IdVerificationUrl = "https://example.com/cac.pdf"
+            IdVerificationUrl = "https://example.com/cac.pdf",
+            IdVerificationName = "Test Business CAC"
         };
 
         var business = new Business { Id = businessId, Name = "Test Business" };
-        var verification = new BusinessVerification
-        {
-            Id = Guid.NewGuid(),
-            BusinessId = businessId,
-            IdVerified = true,
-            IdVerificationStatus = "verified"
-        };
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
-        _verificationRepoMock.Setup(r => r.FindByBusinessIdAsync(businessId)).ReturnsAsync(verification);
 
         // Act
         await _service.SubmitIdVerificationAsync(request);
 
-        // Assert
+        // Assert - should insert into id_verification_request
+        _idVerificationRequestRepoMock.Verify(r => r.AddAsync(It.Is<IdVerificationRequest>(
+            req => req.BusinessId == businessId &&
+                   req.IdVerificationType == "CAC" &&
+                   req.IdVerificationNumber == "RC123456" &&
+                   req.IdVerificationUrl == "https://example.com/cac.pdf" &&
+                   req.IdVerificationName == "Test Business CAC"
+        )), Times.Once);
+
+        // Assert - should update business_verification status
         _verificationRepoMock.Verify(r => r.UpdateIdVerificationStatusAsync(
             businessId,
             false,      // id_verified should be set to false
             "pending"   // id_verification_status should be 'pending'
         ), Times.Once);
-
-        _businessRepoMock.Verify(r => r.UpdateIdVerificationAsync(
-            businessId,
-            "https://example.com/cac.pdf",
-            "CAC",
-            "RC123456"
-        ), Times.Once);
     }
 
     [Test]
-    public async Task SubmitIdVerificationAsync_ShouldCreateVerificationEntry_WhenNotExists()
+    public async Task SubmitIdVerificationAsync_ShouldWorkWithNullableFields()
     {
         // Arrange
         var businessId = Guid.NewGuid();
@@ -83,29 +81,26 @@ public class BusinessVerificationServiceTests
         {
             BusinessId = businessId,
             IdVerificationType = "TIN",
-            IdVerificationNumber = "TIN123456",
-            IdVerificationUrl = "https://example.com/tin.pdf"
+            IdVerificationNumber = null,
+            IdVerificationUrl = null,
+            IdVerificationName = null
         };
 
         var business = new Business { Id = businessId, Name = "Test Business" };
 
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
-        _verificationRepoMock.Setup(r => r.FindByBusinessIdAsync(businessId))
-            .ReturnsAsync((BusinessVerification?)null);
 
         // Act
         await _service.SubmitIdVerificationAsync(request);
 
-        // Assert - should create a new verification entry
-        _verificationRepoMock.Verify(r => r.AddAsync(It.Is<BusinessVerification>(
-            v => v.BusinessId == businessId
+        // Assert - should insert into id_verification_request with nullable fields
+        _idVerificationRequestRepoMock.Verify(r => r.AddAsync(It.Is<IdVerificationRequest>(
+            req => req.BusinessId == businessId &&
+                   req.IdVerificationType == "TIN" &&
+                   req.IdVerificationNumber == null &&
+                   req.IdVerificationUrl == null &&
+                   req.IdVerificationName == null
         )), Times.Once);
-
-        _verificationRepoMock.Verify(r => r.UpdateIdVerificationStatusAsync(
-            businessId,
-            false,
-            "pending"
-        ), Times.Once);
     }
 
     [Test]

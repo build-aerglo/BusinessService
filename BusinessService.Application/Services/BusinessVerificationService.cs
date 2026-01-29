@@ -10,13 +10,16 @@ public class BusinessVerificationService : IBusinessVerificationService
 {
     private readonly IBusinessVerificationRepository _verificationRepository;
     private readonly IBusinessRepository _businessRepository;
+    private readonly IIdVerificationRequestRepository _idVerificationRequestRepository;
 
     public BusinessVerificationService(
         IBusinessVerificationRepository verificationRepository,
-        IBusinessRepository businessRepository)
+        IBusinessRepository businessRepository,
+        IIdVerificationRequestRepository idVerificationRequestRepository)
     {
         _verificationRepository = verificationRepository;
         _businessRepository = businessRepository;
+        _idVerificationRequestRepository = idVerificationRequestRepository;
     }
 
     public async Task<BusinessVerificationDto> GetVerificationStatusAsync(Guid businessId)
@@ -121,30 +124,22 @@ public class BusinessVerificationService : IBusinessVerificationService
         if (business == null)
             throw new BusinessNotFoundException($"Business with ID {request.BusinessId} not found");
 
-        // Ensure business_verification entry exists
-        var verification = await _verificationRepository.FindByBusinessIdAsync(request.BusinessId);
-        if (verification == null)
+        // Insert into id_verification_request table
+        var idVerificationRequest = new IdVerificationRequest
         {
-            verification = new BusinessVerification
-            {
-                Id = Guid.NewGuid(),
-                BusinessId = request.BusinessId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            await _verificationRepository.AddAsync(verification);
-        }
+            Id = Guid.NewGuid(),
+            BusinessId = request.BusinessId,
+            IdVerificationType = request.IdVerificationType,
+            IdVerificationNumber = request.IdVerificationNumber,
+            IdVerificationUrl = request.IdVerificationUrl,
+            IdVerificationName = request.IdVerificationName,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _idVerificationRequestRepository.AddAsync(idVerificationRequest);
 
         // Update business_verification: id_verified = false, id_verification_status = 'pending'
         await _verificationRepository.UpdateIdVerificationStatusAsync(request.BusinessId, false, "pending");
-
-        // Update business: id_verified = false, id_verification_url, id_verification_type, id_verification_number
-        await _businessRepository.UpdateIdVerificationAsync(
-            request.BusinessId,
-            request.IdVerificationUrl,
-            request.IdVerificationType,
-            request.IdVerificationNumber
-        );
     }
 
     public async Task<VerificationStatusResponse> GetDetailedStatusAsync(Guid businessId)

@@ -35,6 +35,7 @@ builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 // New repositories for business service features
 builder.Services.AddScoped<IBusinessVerificationRepository, BusinessVerificationRepository>();
+builder.Services.AddScoped<IIdVerificationRequestRepository, IdVerificationRequestRepository>();
 builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
 builder.Services.AddScoped<IBusinessSubscriptionRepository, BusinessSubscriptionRepository>();
 builder.Services.AddScoped<IBusinessUserRepository, BusinessUserRepository>();

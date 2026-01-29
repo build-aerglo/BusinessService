@@ -61,8 +61,9 @@ public class SubmitIdVerificationRequest
 {
     public Guid BusinessId { get; set; }
     public string IdVerificationType { get; set; } = default!;
-    public string IdVerificationNumber { get; set; } = default!;
-    public string IdVerificationUrl { get; set; } = default!;
+    public string? IdVerificationNumber { get; set; }
+    public string? IdVerificationUrl { get; set; }
+    public string? IdVerificationName { get; set; }
 }
 
 /// <summary>
