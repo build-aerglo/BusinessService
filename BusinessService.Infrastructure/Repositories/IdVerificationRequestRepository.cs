@@ -16,7 +16,18 @@ public class IdVerificationRequestRepository : IIdVerificationRequestRepository
 
     public async Task<IdVerificationRequest?> FindByIdAsync(Guid id)
     {
-        const string sql = "SELECT * FROM id_verification_request WHERE id = @id;";
+        const string sql = """
+            SELECT
+                id AS Id,
+                business_id AS BusinessId,
+                id_verification_number AS IdVerificationNumber,
+                id_verification_type AS IdVerificationType,
+                id_verification_url AS IdVerificationUrl,
+                id_verification_name AS IdVerificationName,
+                created_at AS CreatedAt
+            FROM id_verification_request
+            WHERE id = @id;
+        """;
         using var conn = _context.CreateConnection();
         return await conn.QuerySingleOrDefaultAsync<IdVerificationRequest>(sql, new { id });
     }
@@ -24,7 +35,15 @@ public class IdVerificationRequestRepository : IIdVerificationRequestRepository
     public async Task<IdVerificationRequest?> FindByBusinessIdAsync(Guid businessId)
     {
         const string sql = """
-            SELECT * FROM id_verification_request
+            SELECT
+                id AS Id,
+                business_id AS BusinessId,
+                id_verification_number AS IdVerificationNumber,
+                id_verification_type AS IdVerificationType,
+                id_verification_url AS IdVerificationUrl,
+                id_verification_name AS IdVerificationName,
+                created_at AS CreatedAt
+            FROM id_verification_request
             WHERE business_id = @businessId
             ORDER BY created_at DESC
             LIMIT 1;
@@ -36,7 +55,15 @@ public class IdVerificationRequestRepository : IIdVerificationRequestRepository
     public async Task<List<IdVerificationRequest>> FindAllByBusinessIdAsync(Guid businessId)
     {
         const string sql = """
-            SELECT * FROM id_verification_request
+            SELECT
+                id AS Id,
+                business_id AS BusinessId,
+                id_verification_number AS IdVerificationNumber,
+                id_verification_type AS IdVerificationType,
+                id_verification_url AS IdVerificationUrl,
+                id_verification_name AS IdVerificationName,
+                created_at AS CreatedAt
+            FROM id_verification_request
             WHERE business_id = @businessId
             ORDER BY created_at DESC;
         """;
@@ -47,7 +74,9 @@ public class IdVerificationRequestRepository : IIdVerificationRequestRepository
 
     public async Task AddAsync(IdVerificationRequest request)
     {
-        const string sql = """
+        const string deleteSql = "DELETE FROM id_verification_request WHERE business_id = @BusinessId;";
+
+        const string insertSql = """
             INSERT INTO id_verification_request (
                 id, business_id, id_verification_number, id_verification_type,
                 id_verification_url, id_verification_name, created_at
@@ -58,6 +87,15 @@ public class IdVerificationRequestRepository : IIdVerificationRequestRepository
         """;
 
         using var conn = _context.CreateConnection();
-        await conn.ExecuteAsync(sql, request);
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        // Delete existing id verification requests for this business
+        await conn.ExecuteAsync(deleteSql, new { request.BusinessId }, tx);
+
+        // Insert the new request
+        await conn.ExecuteAsync(insertSql, request, tx);
+
+        tx.Commit();
     }
 }

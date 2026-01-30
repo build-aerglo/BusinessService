@@ -161,40 +161,30 @@ public class IdVerificationRequestRepositoryTests
     // ========== FindByBusinessIdAsync Tests ==========
 
     [Test]
-    public async Task FindByBusinessIdAsync_ShouldReturnMostRecentRequest()
+    public async Task FindByBusinessIdAsync_ShouldReturnRequest_WhenExists()
     {
         // Arrange
         var businessId = await CreateTestBusiness("IdVerRepoTest Business 4");
 
-        var olderRequest = new IdVerificationRequest
-        {
-            Id = Guid.NewGuid(),
-            BusinessId = businessId,
-            IdVerificationType = "CAC",
-            IdVerificationNumber = "RC-OLD",
-            CreatedAt = DateTime.UtcNow.AddDays(-5)
-        };
-
-        var newerRequest = new IdVerificationRequest
+        var request = new IdVerificationRequest
         {
             Id = Guid.NewGuid(),
             BusinessId = businessId,
             IdVerificationType = "TIN",
-            IdVerificationNumber = "TIN-NEW",
+            IdVerificationNumber = "TIN-123",
             CreatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(olderRequest);
-        await _repository.AddAsync(newerRequest);
+        await _repository.AddAsync(request);
 
         // Act
         var result = await _repository.FindByBusinessIdAsync(businessId);
 
         // Assert
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.Id, Is.EqualTo(newerRequest.Id));
+        Assert.That(result!.Id, Is.EqualTo(request.Id));
         Assert.That(result.IdVerificationType, Is.EqualTo("TIN"));
-        Assert.That(result.IdVerificationNumber, Is.EqualTo("TIN-NEW"));
+        Assert.That(result.IdVerificationNumber, Is.EqualTo("TIN-123"));
     }
 
     [Test]
@@ -210,53 +200,47 @@ public class IdVerificationRequestRepositoryTests
         Assert.That(result, Is.Null);
     }
 
-    // ========== FindAllByBusinessIdAsync Tests ==========
+    // ========== AddAsync Replacement Behavior Tests ==========
 
     [Test]
-    public async Task FindAllByBusinessIdAsync_ShouldReturnAllRequestsOrderedByCreatedAtDesc()
+    public async Task AddAsync_ShouldReplaceExistingRequest_ForSameBusiness()
     {
         // Arrange
         var businessId = await CreateTestBusiness("IdVerRepoTest Business 6");
 
-        var request1 = new IdVerificationRequest
+        var oldRequest = new IdVerificationRequest
         {
             Id = Guid.NewGuid(),
             BusinessId = businessId,
             IdVerificationType = "CAC",
-            IdVerificationNumber = "RC-001",
-            CreatedAt = DateTime.UtcNow.AddDays(-10)
+            IdVerificationNumber = "RC-OLD",
+            CreatedAt = DateTime.UtcNow.AddDays(-5)
         };
 
-        var request2 = new IdVerificationRequest
+        var newRequest = new IdVerificationRequest
         {
             Id = Guid.NewGuid(),
             BusinessId = businessId,
             IdVerificationType = "TIN",
-            IdVerificationNumber = "TIN-001",
-            CreatedAt = DateTime.UtcNow.AddDays(-5)
-        };
-
-        var request3 = new IdVerificationRequest
-        {
-            Id = Guid.NewGuid(),
-            BusinessId = businessId,
-            IdVerificationType = "LICENSE",
-            IdVerificationNumber = "LIC-001",
+            IdVerificationNumber = "TIN-NEW",
             CreatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(request1);
-        await _repository.AddAsync(request2);
-        await _repository.AddAsync(request3);
+        await _repository.AddAsync(oldRequest);
+        await _repository.AddAsync(newRequest);
 
         // Act
         var results = await _repository.FindAllByBusinessIdAsync(businessId);
 
-        // Assert
-        Assert.That(results, Has.Count.EqualTo(3));
-        Assert.That(results[0].Id, Is.EqualTo(request3.Id)); // Most recent first
-        Assert.That(results[1].Id, Is.EqualTo(request2.Id));
-        Assert.That(results[2].Id, Is.EqualTo(request1.Id)); // Oldest last
+        // Assert - Only the new request should exist
+        Assert.That(results, Has.Count.EqualTo(1));
+        Assert.That(results[0].Id, Is.EqualTo(newRequest.Id));
+        Assert.That(results[0].IdVerificationType, Is.EqualTo("TIN"));
+        Assert.That(results[0].IdVerificationNumber, Is.EqualTo("TIN-NEW"));
+
+        // Old request should not exist
+        var oldResult = await _repository.FindByIdAsync(oldRequest.Id);
+        Assert.That(oldResult, Is.Null);
     }
 
     [Test]

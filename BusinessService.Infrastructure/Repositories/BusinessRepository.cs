@@ -200,7 +200,7 @@ public async Task UpdateBusinessStatusAsync(Guid id, string status)
                            WHERE id = @Id;
                        """;
     using var conn = _context.CreateConnection();
-    await conn.ExecuteAsync(sql, new{id, status});
+    await conn.ExecuteAsync(sql, new { Id = id, Status = status });
 }
     
 public async Task ClaimAsync(BusinessClaims claim)
