@@ -77,7 +77,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -100,7 +101,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -139,7 +141,8 @@ public class BusinessRepositoryTests
             BusinessEmail = "test@example.com",
             BusinessPhoneNumber = "+1234567890",
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
 
         // Act
@@ -167,7 +170,8 @@ public class BusinessRepositoryTests
             ReviewCount = 0,
             Categories = new List<Category> { new() { Id = categoryId } },
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
 
         // Act
@@ -196,7 +200,8 @@ public class BusinessRepositoryTests
             IdVerificationType = "CAC",
             IdVerificationNumber = "RC123456",
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
 
         // Act
@@ -225,7 +230,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -264,7 +270,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -324,7 +331,8 @@ public class BusinessRepositoryTests
             ReviewCount = 0,
             IdVerified = false,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -359,7 +367,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -393,7 +402,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -441,7 +451,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(business);
 
@@ -532,7 +543,8 @@ public class BusinessRepositoryTests
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            BusinessStatus = "approved"
         };
         await _repository.AddAsync(parentBusiness);
 

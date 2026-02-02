@@ -513,13 +513,14 @@ public async Task UpdateProfileAsync(Business business)
     public async Task AddBusinessBranchAsync(BusinessBranches branch)
     {
         const string sql = @"
-            INSERT INTO business_branches (business_id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
-            VALUES (@BusinessId, @BranchName, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
+            INSERT INTO business_branches (business_id, id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
+            VALUES (@BusinessId, @Id, @BranchName, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
         ";
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, new
         {
             branch.BusinessId,
+            branch.Id,
             branch.BranchName,
             branch.BranchStreet,
             branch.BranchCityTown,

@@ -60,6 +60,8 @@ public class BusinessControllerTests
             null,
             null,
             null,
+            null,
+            false,
             null
         );
     }
@@ -191,8 +193,8 @@ public class BusinessControllerTests
 
         var expected = new List<BusinessSummaryResponseDto>
         {
-            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null, true, null, null, null),
-            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null, true, null, null, null)
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "Acme Repairs", 4.8m, 210, false, null, null ,null, null, null, null, true, null, null, null, false, null),
+            new BusinessSummaryResponseDto(Guid.NewGuid(), "FixIt Hub", 4.2m, 90, false, null, null ,null, null, null, null, true, null, null, null, false, null)
         };
 
         _serviceMock
