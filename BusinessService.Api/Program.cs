@@ -105,6 +105,7 @@ builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
 });
 
 builder.Services.AddHostedService<DndModeExpiryBackgroundService>();
+builder.Services.AddHostedService<BusinessUpdateListener>();
 // Optional: CORS (if calling from frontend)
 builder.Services.AddCors(options =>
 {
