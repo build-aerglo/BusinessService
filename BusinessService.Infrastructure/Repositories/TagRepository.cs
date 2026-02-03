@@ -81,16 +81,30 @@ public class TagRepository: ITagRepository
             businessId
         });
     }
-
+    
     public async Task<List<Tags>> FindByNamesAsync(string[] names)
     {
         if (names == null || names.Length == 0)
             return new List<Tags>();
 
-        const string sql = "SELECT * FROM category_tags WHERE LOWER(name) = ANY(@names);";
+        var lowerNames = names
+            .Where(n => !string.IsNullOrWhiteSpace(n)) // 👈 critical
+            .Select(n => n.ToLowerInvariant())
+            .Distinct()
+            .ToArray();
+
+        if (lowerNames.Length == 0)
+            return new List<Tags>();
+
+        const string sql = """
+                               SELECT *
+                               FROM category_tags
+                               WHERE LOWER(name) = ANY(@names);
+                           """;
+
         using var conn = _context.CreateConnection();
-        var lowerNames = names.Select(n => n.ToLower()).ToArray();
         var tags = await conn.QueryAsync<Tags>(sql, new { names = lowerNames });
         return tags.ToList();
     }
+
 }
