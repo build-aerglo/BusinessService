@@ -186,8 +186,14 @@ public async Task AddAsync(Business business)
 
         await conn.ExecuteAsync(joinSql, joinRows);
     }
-    
-    
+
+    // Insert default auto-response settings
+    const string autoResponseSql = """
+        INSERT INTO business_auto_response (business_id, positive_response, negative_response, neutral_response, allow_auto_response)
+        VALUES (@BusinessId, NULL, NULL, NULL, false)
+        ON CONFLICT DO NOTHING;
+    """;
+    await conn.ExecuteAsync(autoResponseSql, new { BusinessId = business.Id });
 }
 
 
