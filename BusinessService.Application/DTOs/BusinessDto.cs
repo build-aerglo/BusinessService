@@ -34,5 +34,7 @@ public record BusinessDto(
     string? BusinessCityTown,
     string? BusinessState,
     string? ReviewSummary,
+    bool IdVerified,
+    string? IdVerificationType,
     decimal? BayesianAverage
 );

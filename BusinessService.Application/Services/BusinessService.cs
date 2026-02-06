@@ -15,14 +15,16 @@ public class BusinessService : IBusinessService
     private readonly IQrCodeService _qrCodeService;
     private readonly IBusinessSearchProducer _searchProducer;
     private readonly ITagRepository _tagRepository;
+    private readonly IBusinessVerificationRepository _verificationRepository;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository, IBusinessVerificationRepository verificationRepository)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
         _qrCodeService = qrCodeService;
         _searchProducer = searchProducer;
         _tagRepository = tagRepository;
+        _verificationRepository = verificationRepository;
     }
     
     private async Task<BusinessDto> MapToDto(Business business)
@@ -80,6 +82,8 @@ public class BusinessService : IBusinessService
             business.BusinessCityTown,
             business.BusinessState,
             business.ReviewSummary,
+            business.IdVerified,
+            business.IdVerificationType,
             business.BayesianAverage
         );
     }
@@ -116,6 +120,16 @@ public class BusinessService : IBusinessService
     business.ReviewLink = qrContent;
 
     await _repository.AddAsync(business);
+
+    // Create business_verification entry for the new business
+    var verification = new BusinessVerification
+    {
+        Id = Guid.NewGuid(),
+        BusinessId = business.Id,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow
+    };
+    await _verificationRepository.AddAsync(verification);
 
     var dto = await MapToDto(business);
     await _searchProducer.PublishBusinessCreatedAsync(dto);
@@ -171,8 +185,11 @@ public class BusinessService : IBusinessService
     {
         var business = await _repository.FindByIdAsync(id)
             ?? throw new BusinessNotFoundException($"Business {id} not found.");
-        
-        
+
+        // Track if email or phone changed for verification status update
+        var emailChanged = request.BusinessEmail != null && request.BusinessEmail != business.BusinessEmail;
+        var phoneChanged = request.BusinessPhoneNumber != null && request.BusinessPhoneNumber != business.BusinessPhoneNumber;
+
         if (request.CategoryIds != null && request.CategoryIds.Count > 0)
         {
             var categories = await _categoryRepository.FindAllByIdsAsync(request.CategoryIds);
@@ -196,7 +213,7 @@ public class BusinessService : IBusinessService
         {
             business.OpeningHours = JsonSerializer.Serialize(request.OpeningHours);
         }
-        business.BusinessEmail = request.BusinessEmail ?? business.BusinessEmail;
+        // Note: email update removed - email cannot be updated through profile update
         business.BusinessPhoneNumber = request.BusinessPhoneNumber ?? business.BusinessPhoneNumber;
         business.CacNumber = request.CacNumber ?? business.CacNumber;
         business.AccessUsername = request.AccessUsername ?? business.AccessUsername;
@@ -233,7 +250,22 @@ public class BusinessService : IBusinessService
         {
             throw new BusinessConflictException("The provided business email or access username is already in use.");
         }
-        
+
+        // Update business_verification if email or phone changed
+        if (emailChanged || phoneChanged)
+        {
+            var verification = await _verificationRepository.FindByBusinessIdAsync(id);
+            if (verification != null)
+            {
+                await _verificationRepository.UpdatePhoneAndEmailVerificationAsync(
+                    id,
+                    phoneChanged ? false : verification.PhoneVerified,
+                    emailChanged ? false : verification.EmailVerified,
+                    phoneChanged ? request.BusinessPhoneNumber : null
+                );
+            }
+        }
+
         var dto = await MapToDto(business);
 
         await _searchProducer.PublishBusinessUpdatedAsync(dto);
@@ -294,7 +326,9 @@ public class BusinessService : IBusinessService
                 b.IsVerified,
                 b.BusinessStreet,
                 b.BusinessCityTown,
-                b.BusinessState
+                b.BusinessState,
+                b.IdVerified,
+                b.IdVerificationType
             ));
         }
 
@@ -340,7 +374,9 @@ public class BusinessService : IBusinessService
                 b.IsVerified,
                 b.BusinessStreet,
                 b.BusinessCityTown,
-                b.BusinessState
+                b.BusinessState,
+                b.IdVerified,
+                b.IdVerificationType
             ));
         }
 

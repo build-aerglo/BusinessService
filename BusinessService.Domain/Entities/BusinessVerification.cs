@@ -26,6 +26,13 @@ public class BusinessVerification
     public string? AddressProofUrl { get; set; }
     public DateTime? AddressVerifiedAt { get; set; }
 
+    // ID Verification (CAC, TIN, etc.)
+    public bool IdVerified { get; set; }
+    public string? IdVerificationStatus { get; set; }
+
+    // Verification Progress (percentage)
+    public decimal VerificationProgress { get; set; }
+
     // Verified Level Requirements (additional)
     public bool OnlinePresenceVerified { get; set; }
     public string? WebsiteUrl { get; set; }

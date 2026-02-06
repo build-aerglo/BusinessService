@@ -58,6 +58,10 @@ public async Task AddAsync(Business business)
             business_street,
             business_citytown,
             business_state,
+            id_verified,
+            id_verification_url,
+            id_verification_type,
+            id_verification_number,
             created_at,
             updated_at
         )
@@ -93,6 +97,10 @@ public async Task AddAsync(Business business)
             @BusinessStreet,
             @BusinessCityTown,
             @BusinessState,
+            @IdVerified,
+            @IdVerificationUrl,
+            @IdVerificationType,
+            @IdVerificationNumber,
             @CreatedAt,
             @UpdatedAt
         );
@@ -153,6 +161,10 @@ public async Task AddAsync(Business business)
         business.BusinessStreet,
         business.BusinessCityTown,
         business.BusinessState,
+        business.IdVerified,
+        business.IdVerificationUrl,
+        business.IdVerificationType,
+        business.IdVerificationNumber,
         business.CreatedAt,
         business.UpdatedAt
     });
@@ -174,8 +186,14 @@ public async Task AddAsync(Business business)
 
         await conn.ExecuteAsync(joinSql, joinRows);
     }
-    
-    
+
+    // Insert default auto-response settings
+    const string autoResponseSql = """
+        INSERT INTO business_auto_response (business_id, positive_response, negative_response, neutral_response, allow_auto_response)
+        VALUES (@BusinessId, NULL, NULL, NULL, false)
+        ON CONFLICT DO NOTHING;
+    """;
+    await conn.ExecuteAsync(autoResponseSql, new { BusinessId = business.Id });
 }
 
 
@@ -188,7 +206,7 @@ public async Task UpdateBusinessStatusAsync(Guid id, string status)
                            WHERE id = @Id;
                        """;
     using var conn = _context.CreateConnection();
-    await conn.ExecuteAsync(sql, new{id, status});
+    await conn.ExecuteAsync(sql, new { Id = id, Status = status });
 }
     
 public async Task ClaimAsync(BusinessClaims claim)
@@ -505,13 +523,14 @@ public async Task UpdateProfileAsync(Business business)
     public async Task AddBusinessBranchAsync(BusinessBranches branch)
     {
         const string sql = @"
-            INSERT INTO business_branches (business_id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
-            VALUES (@BusinessId, @BranchName, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
+            INSERT INTO business_branches (business_id, id, branch_name, branch_street, branch_citytown, branch_state, created_at, updated_at)
+            VALUES (@BusinessId, @Id, @BranchName, @BranchStreet, @BranchCityTown, @BranchState, now(), now());
         ";
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(sql, new
         {
             branch.BusinessId,
+            branch.Id,
             branch.BranchName,
             branch.BranchStreet,
             branch.BranchCityTown,
@@ -564,5 +583,28 @@ public async Task UpdateProfileAsync(Business business)
         if (branch == null) return null;
 
         return branch;
+    }
+
+    public async Task UpdateIdVerificationAsync(Guid businessId, string idVerificationUrl, string idVerificationType, string idVerificationNumber)
+    {
+        const string sql = """
+                               UPDATE business
+                               SET id_verified = false,
+                                   id_verification_url = @IdVerificationUrl,
+                                   id_verification_type = @IdVerificationType,
+                                   id_verification_number = @IdVerificationNumber,
+                                   updated_at = @UpdatedAt
+                               WHERE id = @BusinessId;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            BusinessId = businessId,
+            IdVerificationUrl = idVerificationUrl,
+            IdVerificationType = idVerificationType,
+            IdVerificationNumber = idVerificationNumber,
+            UpdatedAt = DateTime.UtcNow
+        });
     }
 }

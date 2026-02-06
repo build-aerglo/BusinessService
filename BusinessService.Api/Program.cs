@@ -35,6 +35,7 @@ builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 // New repositories for business service features
 builder.Services.AddScoped<IBusinessVerificationRepository, BusinessVerificationRepository>();
+builder.Services.AddScoped<IIdVerificationRequestRepository, IdVerificationRequestRepository>();
 builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
 builder.Services.AddScoped<IBusinessSubscriptionRepository, BusinessSubscriptionRepository>();
 builder.Services.AddScoped<IBusinessUserRepository, BusinessUserRepository>();
@@ -45,6 +46,7 @@ builder.Services.AddScoped<IBusinessAnalyticsRepository, BusinessAnalyticsReposi
 builder.Services.AddScoped<IBranchComparisonRepository, BranchComparisonRepository>();
 builder.Services.AddScoped<ICompetitorComparisonRepository, CompetitorComparisonRepository>();
 builder.Services.AddScoped<ICompetitorComparisonSnapshotRepository, CompetitorComparisonSnapshotRepository>();
+builder.Services.AddScoped<IBusinessAutoResponseRepository, BusinessAutoResponseRepository>();
 
 // Register application services (application layer)
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
@@ -61,6 +63,7 @@ builder.Services.AddScoped<IAutoResponseService, AutoResponseService>();
 builder.Services.AddScoped<IBusinessClaimService, BusinessClaimService>();
 builder.Services.AddScoped<IExternalSourceService, ExternalSourceService>();
 builder.Services.AddScoped<IBusinessAnalyticsService, BusinessAnalyticsService>();
+builder.Services.AddScoped<IBusinessAutoResponseService, BusinessAutoResponseService>();
 
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Faq>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());

@@ -109,6 +109,28 @@ public class BusinessVerificationController : ControllerBase
     }
 
     /// <summary>
+    /// Submit ID verification (CAC, TIN, etc.)
+    /// </summary>
+    [HttpPost("verify-id")]
+    public async Task<IActionResult> SubmitIdVerification([FromBody] SubmitIdVerificationRequest request)
+    {
+        try
+        {
+            await _verificationService.SubmitIdVerificationAsync(request);
+            return Ok(new { message = "ID verification submitted successfully" });
+        }
+        catch (BusinessNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error submitting ID verification for business {BusinessId}", request.BusinessId);
+            return StatusCode(500, new { message = "An error occurred while submitting ID verification" });
+        }
+    }
+
+    /// <summary>
     /// Trigger re-verification for a business
     /// </summary>
     [HttpPost("{businessId:guid}/reverify")]

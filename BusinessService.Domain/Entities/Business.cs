@@ -45,6 +45,12 @@ public class Business
     
     public string? ReviewSummary { get; set; }
 
+    // ID Verification fields
+    public bool IdVerified { get; set; }
+    public string? IdVerificationUrl { get; set; }
+    public string? IdVerificationType { get; set; }
+    public string? IdVerificationNumber { get; set; }
+
     public List<Category> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

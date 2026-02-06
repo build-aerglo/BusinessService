@@ -36,6 +36,7 @@ public class BusinessVerificationRepository : IBusinessVerificationRepository
                 phone_verified, phone_number, phone_verified_at,
                 email_verified, email, email_verified_at,
                 address_verified, address_proof_url, address_verified_at,
+                id_verified, id_verification_status, verification_progress,
                 online_presence_verified, website_url, social_media_url, online_presence_verified_at,
                 other_ids_verified, tin_number, license_number, other_id_document_url, other_ids_verified_at,
                 business_domain_email_verified, business_domain_email, business_domain_email_verified_at,
@@ -46,6 +47,7 @@ public class BusinessVerificationRepository : IBusinessVerificationRepository
                 @PhoneVerified, @PhoneNumber, @PhoneVerifiedAt,
                 @EmailVerified, @Email, @EmailVerifiedAt,
                 @AddressVerified, @AddressProofUrl, @AddressVerifiedAt,
+                @IdVerified, @IdVerificationStatus, @VerificationProgress,
                 @OnlinePresenceVerified, @WebsiteUrl, @SocialMediaUrl, @OnlinePresenceVerifiedAt,
                 @OtherIdsVerified, @TinNumber, @LicenseNumber, @OtherIdDocumentUrl, @OtherIdsVerifiedAt,
                 @BusinessDomainEmailVerified, @BusinessDomainEmail, @BusinessDomainEmailVerifiedAt,
@@ -66,6 +68,7 @@ public class BusinessVerificationRepository : IBusinessVerificationRepository
                 phone_verified = @PhoneVerified, phone_number = @PhoneNumber, phone_verified_at = @PhoneVerifiedAt,
                 email_verified = @EmailVerified, email = @Email, email_verified_at = @EmailVerifiedAt,
                 address_verified = @AddressVerified, address_proof_url = @AddressProofUrl, address_verified_at = @AddressVerifiedAt,
+                id_verified = @IdVerified, id_verification_status = @IdVerificationStatus, verification_progress = @VerificationProgress,
                 online_presence_verified = @OnlinePresenceVerified, website_url = @WebsiteUrl,
                 social_media_url = @SocialMediaUrl, online_presence_verified_at = @OnlinePresenceVerifiedAt,
                 other_ids_verified = @OtherIdsVerified, tin_number = @TinNumber,
@@ -105,5 +108,47 @@ public class BusinessVerificationRepository : IBusinessVerificationRepository
         using var conn = _context.CreateConnection();
         var results = await conn.QueryAsync<BusinessVerification>(sql);
         return results.ToList();
+    }
+
+    public async Task UpdateIdVerificationStatusAsync(Guid businessId, bool idVerified, string idVerificationStatus)
+    {
+        const string sql = """
+            UPDATE business_verification
+            SET id_verified = @IdVerified,
+                id_verification_status = @IdVerificationStatus,
+                updated_at = @UpdatedAt
+            WHERE business_id = @BusinessId;
+        """;
+
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            BusinessId = businessId,
+            IdVerified = idVerified,
+            IdVerificationStatus = idVerificationStatus,
+            UpdatedAt = DateTime.UtcNow
+        });
+    }
+
+    public async Task UpdatePhoneAndEmailVerificationAsync(Guid businessId, bool phoneVerified, bool emailVerified, string? phoneNumber)
+    {
+        const string sql = """
+            UPDATE business_verification
+            SET phone_verified = @PhoneVerified,
+                email_verified = @EmailVerified,
+                phone_number = COALESCE(@PhoneNumber, phone_number),
+                updated_at = @UpdatedAt
+            WHERE business_id = @BusinessId;
+        """;
+
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            BusinessId = businessId,
+            PhoneVerified = phoneVerified,
+            EmailVerified = emailVerified,
+            PhoneNumber = phoneNumber,
+            UpdatedAt = DateTime.UtcNow
+        });
     }
 }

@@ -10,13 +10,16 @@ public class BusinessVerificationService : IBusinessVerificationService
 {
     private readonly IBusinessVerificationRepository _verificationRepository;
     private readonly IBusinessRepository _businessRepository;
+    private readonly IIdVerificationRequestRepository _idVerificationRequestRepository;
 
     public BusinessVerificationService(
         IBusinessVerificationRepository verificationRepository,
-        IBusinessRepository businessRepository)
+        IBusinessRepository businessRepository,
+        IIdVerificationRequestRepository idVerificationRequestRepository)
     {
         _verificationRepository = verificationRepository;
         _businessRepository = businessRepository;
+        _idVerificationRequestRepository = idVerificationRequestRepository;
     }
 
     public async Task<BusinessVerificationDto> GetVerificationStatusAsync(Guid businessId)
@@ -115,6 +118,30 @@ public class BusinessVerificationService : IBusinessVerificationService
         return MapToDto(verification);
     }
 
+    public async Task SubmitIdVerificationAsync(SubmitIdVerificationRequest request)
+    {
+        var business = await _businessRepository.FindByIdAsync(request.BusinessId);
+        if (business == null)
+            throw new BusinessNotFoundException($"Business with ID {request.BusinessId} not found");
+
+        // Insert into id_verification_request table
+        var idVerificationRequest = new IdVerificationRequest
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = request.BusinessId,
+            IdVerificationType = request.IdVerificationType,
+            IdVerificationNumber = request.IdVerificationNumber,
+            IdVerificationUrl = request.IdVerificationUrl,
+            IdVerificationName = request.IdVerificationName,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _idVerificationRequestRepository.AddAsync(idVerificationRequest);
+
+        // Update business_verification: id_verified = false, id_verification_status = 'pending'
+        await _verificationRepository.UpdateIdVerificationStatusAsync(request.BusinessId, false, "pending");
+    }
+
     public async Task<VerificationStatusResponse> GetDetailedStatusAsync(Guid businessId)
     {
         var verification = await _verificationRepository.FindByBusinessIdAsync(businessId);
@@ -209,6 +236,8 @@ public class BusinessVerificationService : IBusinessVerificationService
             v.PhoneVerified,
             v.EmailVerified,
             v.AddressVerified,
+            v.IdVerified,
+            v.IdVerificationStatus,
             v.OnlinePresenceVerified,
             v.OtherIdsVerified,
             v.BusinessDomainEmailVerified,
