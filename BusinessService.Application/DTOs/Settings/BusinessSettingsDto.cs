@@ -45,6 +45,7 @@ public class UpdateBusinessSettingsRequest
     public string? DndModeReason { get; set; }
     public string? DndModeMessage { get; set; }
     public bool? AutoResponseEnabled { get; set; }
+    public string? PreferredModeOfContact { get; set; }
 }
 
 /// <summary>

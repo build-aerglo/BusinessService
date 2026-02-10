@@ -21,4 +21,5 @@ public interface IBusinessRepository
     Task UpdateBusinessBranchAsync(BusinessBranches branch);
     Task<BusinessBranches?> FindBranchByIdAsync(Guid id);
     Task UpdateIdVerificationAsync(Guid businessId, string idVerificationUrl, string idVerificationType, string idVerificationNumber);
+    Task UpdatePreferredContactMethodAsync(Guid businessId, string preferredContactMethod);
 }

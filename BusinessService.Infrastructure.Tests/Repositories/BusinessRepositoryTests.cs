@@ -43,11 +43,13 @@ public class BusinessRepositoryTests
     private void CleanupTestData()
     {
         using var conn = new NpgsqlConnection(_connectionString);
+        conn.Execute("DELETE FROM business_auto_response WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'BusRepoTest%');");
         conn.Execute("DELETE FROM business_branches WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'BusRepoTest%');");
         conn.Execute("DELETE FROM business_category WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'BusRepoTest%');");
         conn.Execute("DELETE FROM business_verification WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'BusRepoTest%');");
         conn.Execute("DELETE FROM business_claims WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'BusRepoTest%');");
         conn.Execute("DELETE FROM business WHERE name LIKE 'BusRepoTest%';");
+        conn.Execute("DELETE FROM category WHERE name LIKE 'BusRepoTestCategory%';");
     }
 
     private async Task<Guid> CreateTestCategory(string name)

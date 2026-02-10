@@ -99,6 +99,7 @@ public class BusinessClaimRequestRepository : IBusinessClaimRequestRepository
                 status, submitted_at, reviewed_at, reviewed_by_user_id, review_notes, rejection_reason,
                 cac_verified, id_verified, ownership_verified, contact_verified,
                 priority, is_escalated, escalated_at, escalation_reason, expected_review_by,
+                business_category,
                 created_at, updated_at
             ) VALUES (
                 @Id, @BusinessId, @ClaimantUserId, @FullName, @Email, @PhoneNumber, @Role,
@@ -106,6 +107,7 @@ public class BusinessClaimRequestRepository : IBusinessClaimRequestRepository
                 @Status, @SubmittedAt, @ReviewedAt, @ReviewedByUserId, @ReviewNotes, @RejectionReason,
                 @CacVerified, @IdVerified, @OwnershipVerified, @ContactVerified,
                 @Priority, @IsEscalated, @EscalatedAt, @EscalationReason, @ExpectedReviewBy,
+                @BusinessCategory,
                 @CreatedAt, @UpdatedAt
             );
         """;
@@ -143,6 +145,7 @@ public class BusinessClaimRequestRepository : IBusinessClaimRequestRepository
                 ownership_verified = @OwnershipVerified, contact_verified = @ContactVerified,
                 priority = @Priority, is_escalated = @IsEscalated, escalated_at = @EscalatedAt,
                 escalation_reason = @EscalationReason, expected_review_by = @ExpectedReviewBy,
+                business_category = @BusinessCategory,
                 updated_at = @UpdatedAt
             WHERE id = @Id;
         """;

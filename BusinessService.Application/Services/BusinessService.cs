@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BusinessService.Application.DTOs;
+using BusinessService.Application.DTOs.Subscription;
 using BusinessService.Application.Interfaces;
 using BusinessService.Domain.Entities;
 using BusinessService.Domain.Exceptions;
@@ -16,8 +17,9 @@ public class BusinessService : IBusinessService
     private readonly IBusinessSearchProducer _searchProducer;
     private readonly ITagRepository _tagRepository;
     private readonly IBusinessVerificationRepository _verificationRepository;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository, IBusinessVerificationRepository verificationRepository)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository, IBusinessVerificationRepository verificationRepository, ISubscriptionService subscriptionService)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
@@ -25,6 +27,7 @@ public class BusinessService : IBusinessService
         _searchProducer = searchProducer;
         _tagRepository = tagRepository;
         _verificationRepository = verificationRepository;
+        _subscriptionService = subscriptionService;
     }
     
     private async Task<BusinessDto> MapToDto(Business business)
@@ -130,6 +133,22 @@ public class BusinessService : IBusinessService
         UpdatedAt = DateTime.UtcNow
     };
     await _verificationRepository.AddAsync(verification);
+
+    // Register default subscription for the new business
+    try
+    {
+        await _subscriptionService.CreateSubscriptionAsync(new CreateSubscriptionRequest
+        {
+            BusinessId = business.Id,
+            SubscriptionPlanId = Guid.Parse("cdd7c928-f88f-4a96-b3fc-00dc9b6ecb4f"),
+            IsAnnual = false,
+            PaymentReference = "initiation"
+        });
+    }
+    catch (Exception)
+    {
+        // Subscription creation failure should not block business creation
+    }
 
     var dto = await MapToDto(business);
     await _searchProducer.PublishBusinessCreatedAsync(dto);

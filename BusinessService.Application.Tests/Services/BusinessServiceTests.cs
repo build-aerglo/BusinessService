@@ -2,6 +2,7 @@
 // ✅ FIXED: Nullable decimal issues
 
 using BusinessService.Application.DTOs;
+using BusinessService.Application.DTOs.Subscription;
 using BusinessService.Application.Interfaces;
 using BusinessService.Application.Services;
 using BusinessService.Domain.Entities;
@@ -24,6 +25,7 @@ public class BusinessServiceTests
     private Application.Services.BusinessService _service = null!;
     private Mock<ITagRepository> _tagRepoMock = null!;
     private Mock<IBusinessVerificationRepository> _verificationRepoMock = null!;
+    private Mock<ISubscriptionService> _subscriptionServiceMock = null!;
 
     [SetUp]
     public void Setup()
@@ -34,6 +36,7 @@ public class BusinessServiceTests
         _searchProducerMock = new Mock<IBusinessSearchProducer>();
         _tagRepoMock = new Mock<ITagRepository>();
         _verificationRepoMock = new Mock<IBusinessVerificationRepository>();
+        _subscriptionServiceMock = new Mock<ISubscriptionService>();
 
         _qrCodeServiceMock.Setup(q => q.GenerateQrCodeBase64(It.IsAny<string>()))
             .Returns("BASE64_QR_CODE_TEST_VALUE");
@@ -44,7 +47,8 @@ public class BusinessServiceTests
             _qrCodeServiceMock.Object,
             _searchProducerMock.Object,
             _tagRepoMock.Object,
-            _verificationRepoMock.Object
+            _verificationRepoMock.Object,
+            _subscriptionServiceMock.Object
         );
 
     }
@@ -806,6 +810,68 @@ public class BusinessServiceTests
         _businessRepoMock.Verify(r => r.UpdateProfileAsync(It.Is<Business>(
             b => b.BusinessEmail == originalEmail
         )), Times.Once);
+    }
+
+    // ========== Subscription on Business Creation Tests ==========
+
+    [Test]
+    public async Task CreateBusinessAsync_ShouldCreateSubscription_WhenBusinessIsCreated()
+    {
+        // Arrange
+        var request = new CreateBusinessRequest
+        {
+            Name = "Sub Test Biz",
+            Website = "https://subtestbiz.com",
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
+        };
+
+        var category = new Category { Id = request.CategoryIds[0], Name = "Tech" };
+
+        _businessRepoMock.Setup(r => r.ExistsByNameAsync(request.Name)).ReturnsAsync(false);
+        _categoryRepoMock.Setup(r => r.FindAllByIdsAsync(request.CategoryIds))
+            .ReturnsAsync(new List<Category> { category });
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+
+        // Act
+        await _service.CreateBusinessAsync(request);
+
+        // Assert
+        _subscriptionServiceMock.Verify(s => s.CreateSubscriptionAsync(It.Is<CreateSubscriptionRequest>(r =>
+            r.SubscriptionPlanId == Guid.Parse("cdd7c928-f88f-4a96-b3fc-00dc9b6ecb4f") &&
+            r.IsAnnual == false &&
+            r.PaymentReference == "initiation"
+        )), Times.Once);
+    }
+
+    [Test]
+    public async Task CreateBusinessAsync_ShouldNotFail_WhenSubscriptionCreationFails()
+    {
+        // Arrange
+        var request = new CreateBusinessRequest
+        {
+            Name = "Sub Fail Test Biz",
+            Website = "https://subfailtestbiz.com",
+            CategoryIds = new List<Guid> { Guid.NewGuid() }
+        };
+
+        var category = new Category { Id = request.CategoryIds[0], Name = "Tech" };
+
+        _businessRepoMock.Setup(r => r.ExistsByNameAsync(request.Name)).ReturnsAsync(false);
+        _categoryRepoMock.Setup(r => r.FindAllByIdsAsync(request.CategoryIds))
+            .ReturnsAsync(new List<Category> { category });
+        _tagRepoMock.Setup(r => r.FindByNamesAsync(It.IsAny<string[]>()))
+            .ReturnsAsync(new List<Tags>());
+        _subscriptionServiceMock.Setup(s => s.CreateSubscriptionAsync(It.IsAny<CreateSubscriptionRequest>()))
+            .ThrowsAsync(new Exception("Subscription plan not found"));
+
+        // Act
+        var result = await _service.CreateBusinessAsync(request);
+
+        // Assert - business should still be created despite subscription failure
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Sub Fail Test Biz");
+        _businessRepoMock.Verify(r => r.AddAsync(It.IsAny<Business>()), Times.Once);
     }
 
 }

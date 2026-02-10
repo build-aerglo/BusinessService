@@ -16,6 +16,7 @@ public class BusinessSettingsServiceTests
     private Mock<IBusinessRepository> _businessRepoMock = null!;
     private Mock<IBusinessRepServiceClient> _businessRepClientMock = null!;
     private Mock<IUserServiceClient> _userServiceClientMock = null!;
+    private Mock<IBusinessAutoResponseRepository> _autoResponseRepoMock = null!;
     private BusinessSettingsService _service = null!;
 
     [SetUp]
@@ -25,11 +26,13 @@ public class BusinessSettingsServiceTests
         _businessRepoMock = new Mock<IBusinessRepository>();
         _businessRepClientMock = new Mock<IBusinessRepServiceClient>();
         _userServiceClientMock = new Mock<IUserServiceClient>();
+        _autoResponseRepoMock = new Mock<IBusinessAutoResponseRepository>();
         _service = new BusinessSettingsService(
             _settingsRepoMock.Object,
             _businessRepoMock.Object,
             _businessRepClientMock.Object,
-            _userServiceClientMock.Object
+            _userServiceClientMock.Object,
+            _autoResponseRepoMock.Object
         );
     }
 
@@ -266,6 +269,144 @@ public class BusinessSettingsServiceTests
         // Assert
         act.Should().ThrowAsync<UnauthorizedSettingsAccessException>()
             .WithMessage("Only support users can extend DnD mode.");
+    }
+
+    // ========== PreferredModeOfContact Tests ==========
+
+    [Test]
+    public async Task UpdateBusinessSettingsAsync_ShouldUpdatePreferredContactMethod_WhenProvided()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var business = new Business { Id = businessId, Name = "Test Business" };
+        var businessRepDto = new BusinessRepDto(Guid.NewGuid(), businessId, userId, null, null, DateTime.UtcNow);
+        var settings = new BusinessSettings
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = businessId
+        };
+
+        var request = new UpdateBusinessSettingsRequest { PreferredModeOfContact = "email" };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
+        _businessRepClientMock.Setup(c => c.GetParentRepByBusinessIdAsync(businessId))
+            .ReturnsAsync(businessRepDto);
+        _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
+            .ReturnsAsync(settings);
+        _settingsRepoMock.Setup(r => r.UpdateBusinessSettingsAsync(It.IsAny<BusinessSettings>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.UpdateBusinessSettingsAsync(businessId, request, userId);
+
+        // Assert
+        _businessRepoMock.Verify(r => r.UpdatePreferredContactMethodAsync(businessId, "email"), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateBusinessSettingsAsync_ShouldNotUpdatePreferredContactMethod_WhenNotProvided()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var business = new Business { Id = businessId, Name = "Test Business" };
+        var businessRepDto = new BusinessRepDto(Guid.NewGuid(), businessId, userId, null, null, DateTime.UtcNow);
+        var settings = new BusinessSettings
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = businessId
+        };
+
+        var request = new UpdateBusinessSettingsRequest { ReviewsPrivate = true };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
+        _businessRepClientMock.Setup(c => c.GetParentRepByBusinessIdAsync(businessId))
+            .ReturnsAsync(businessRepDto);
+        _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
+            .ReturnsAsync(settings);
+        _settingsRepoMock.Setup(r => r.UpdateBusinessSettingsAsync(It.IsAny<BusinessSettings>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.UpdateBusinessSettingsAsync(businessId, request, userId);
+
+        // Assert
+        _businessRepoMock.Verify(r => r.UpdatePreferredContactMethodAsync(It.IsAny<Guid>(), It.IsAny<string>()), Times.Never);
+    }
+
+    // ========== AutoResponseEnabled -> allow_auto_response Tests ==========
+
+    [Test]
+    public async Task UpdateBusinessSettingsAsync_ShouldUpdateAllowAutoResponse_WhenAutoResponseEnabledProvided()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var business = new Business { Id = businessId, Name = "Test Business" };
+        var businessRepDto = new BusinessRepDto(Guid.NewGuid(), businessId, userId, null, null, DateTime.UtcNow);
+        var settings = new BusinessSettings
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = businessId
+        };
+        var autoResponse = new BusinessAutoResponse
+        {
+            BusinessId = businessId,
+            AllowAutoResponse = false
+        };
+
+        var request = new UpdateBusinessSettingsRequest { AutoResponseEnabled = true };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
+        _businessRepClientMock.Setup(c => c.GetParentRepByBusinessIdAsync(businessId))
+            .ReturnsAsync(businessRepDto);
+        _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
+            .ReturnsAsync(settings);
+        _settingsRepoMock.Setup(r => r.UpdateBusinessSettingsAsync(It.IsAny<BusinessSettings>()))
+            .Returns(Task.CompletedTask);
+        _autoResponseRepoMock.Setup(r => r.FindByBusinessIdAsync(businessId))
+            .ReturnsAsync(autoResponse);
+
+        // Act
+        await _service.UpdateBusinessSettingsAsync(businessId, request, userId);
+
+        // Assert
+        _autoResponseRepoMock.Verify(r => r.UpdateAsync(It.Is<BusinessAutoResponse>(
+            a => a.AllowAutoResponse == true
+        )), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateBusinessSettingsAsync_ShouldNotUpdateAllowAutoResponse_WhenAutoResponseEnabledNotProvided()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var business = new Business { Id = businessId, Name = "Test Business" };
+        var businessRepDto = new BusinessRepDto(Guid.NewGuid(), businessId, userId, null, null, DateTime.UtcNow);
+        var settings = new BusinessSettings
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = businessId
+        };
+
+        var request = new UpdateBusinessSettingsRequest { ReviewsPrivate = true };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
+        _businessRepClientMock.Setup(c => c.GetParentRepByBusinessIdAsync(businessId))
+            .ReturnsAsync(businessRepDto);
+        _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
+            .ReturnsAsync(settings);
+        _settingsRepoMock.Setup(r => r.UpdateBusinessSettingsAsync(It.IsAny<BusinessSettings>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.UpdateBusinessSettingsAsync(businessId, request, userId);
+
+        // Assert
+        _autoResponseRepoMock.Verify(r => r.FindByBusinessIdAsync(It.IsAny<Guid>()), Times.Never);
+        _autoResponseRepoMock.Verify(r => r.UpdateAsync(It.IsAny<BusinessAutoResponse>()), Times.Never);
     }
 
     [Test]

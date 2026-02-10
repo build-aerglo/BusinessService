@@ -50,6 +50,7 @@ public class SubmitBusinessClaimRequest
     public string Email { get; set; } = default!;
     public string PhoneNumber { get; set; } = default!;
     public string Role { get; set; } = default!;
+    public Guid? CategoryId { get; set; }
     public string? CacNumber { get; set; }
     public string? CacDocumentUrl { get; set; }
     public string? IdDocumentUrl { get; set; }

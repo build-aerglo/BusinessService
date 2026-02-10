@@ -607,4 +607,22 @@ public async Task UpdateProfileAsync(Business business)
             UpdatedAt = DateTime.UtcNow
         });
     }
+
+    public async Task UpdatePreferredContactMethodAsync(Guid businessId, string preferredContactMethod)
+    {
+        const string sql = """
+                               UPDATE business
+                               SET preferred_contact_method = @PreferredContactMethod,
+                                   updated_at = @UpdatedAt
+                               WHERE id = @BusinessId;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            BusinessId = businessId,
+            PreferredContactMethod = preferredContactMethod,
+            UpdatedAt = DateTime.UtcNow
+        });
+    }
 }

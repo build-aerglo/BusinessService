@@ -14,18 +14,21 @@ public class BusinessSettingsService : IBusinessSettingsService
     private readonly IBusinessRepository _businessRepository;
     private readonly IBusinessRepServiceClient _businessRepClient;
     private readonly IUserServiceClient _userServiceClient;
+    private readonly IBusinessAutoResponseRepository _autoResponseRepository;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public BusinessSettingsService(
         IBusinessSettingsRepository settingsRepository,
         IBusinessRepository businessRepository,
         IBusinessRepServiceClient businessRepClient,
-        IUserServiceClient userServiceClient)
+        IUserServiceClient userServiceClient,
+        IBusinessAutoResponseRepository autoResponseRepository)
     {
         _settingsRepository = settingsRepository;
         _businessRepository = businessRepository;
         _businessRepClient = businessRepClient;
         _userServiceClient = userServiceClient;
+        _autoResponseRepository = autoResponseRepository;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -90,6 +93,21 @@ public class BusinessSettingsService : IBusinessSettingsService
             else
             {
                 settings.DisableDndMode();
+            }
+        }
+
+        if (request.PreferredModeOfContact != null)
+        {
+            await _businessRepository.UpdatePreferredContactMethodAsync(businessId, request.PreferredModeOfContact);
+        }
+
+        if (request.AutoResponseEnabled.HasValue)
+        {
+            var autoResponse = await _autoResponseRepository.FindByBusinessIdAsync(businessId);
+            if (autoResponse != null)
+            {
+                autoResponse.AllowAutoResponse = request.AutoResponseEnabled.Value;
+                await _autoResponseRepository.UpdateAsync(autoResponse);
             }
         }
 
