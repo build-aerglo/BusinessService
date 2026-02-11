@@ -625,4 +625,19 @@ public async Task UpdateProfileAsync(Business business)
             UpdatedAt = DateTime.UtcNow
         });
     }
+
+    public async Task<Guid?> GetBusinessUserIdByBusinessIdAsync(Guid businessId)
+    {
+        const string sql = """
+                               SELECT u.id
+                               FROM users u
+                               JOIN business b ON u.email = b.business_email
+                               WHERE b.id = @BusinessId
+                                 AND u.user_type = 'business_user'
+                               LIMIT 1;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        return await conn.QuerySingleOrDefaultAsync<Guid?>(sql, new { BusinessId = businessId });
+    }
 }

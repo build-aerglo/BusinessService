@@ -57,7 +57,9 @@ public class BusinessSettingsService : IBusinessSettingsService
             }
         }
 
-        return MapToBusinessSettingsDto(settings);
+        var currentUserId = await _businessRepository.GetBusinessUserIdByBusinessIdAsync(businessId);
+
+        return MapToBusinessSettingsDto(settings, currentUserId);
     }
 
     public async Task<BusinessSettingsDto> UpdateBusinessSettingsAsync(
@@ -297,7 +299,7 @@ public class BusinessSettingsService : IBusinessSettingsService
             throw new UnauthorizedSettingsAccessException("Only the parent business representative can modify business settings.");
     }
 
-    private BusinessSettingsDto MapToBusinessSettingsDto(BusinessSettings settings)
+    private BusinessSettingsDto MapToBusinessSettingsDto(BusinessSettings settings, Guid? currentUserId = null)
     {
         return new BusinessSettingsDto(
             settings.Id,
@@ -321,7 +323,8 @@ public class BusinessSettingsService : IBusinessSettingsService
             settings.ExternalSourcesConnected,
             settings.CreatedAt,
             settings.UpdatedAt,
-            settings.ModifiedByUserId
+            settings.ModifiedByUserId,
+            currentUserId
         );
     }
 

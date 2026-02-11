@@ -30,7 +30,8 @@ public record BusinessSettingsDto(
 
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    Guid? ModifiedByUserId
+    Guid? ModifiedByUserId,
+    Guid? CurrentUserId
 );
 
 /// <summary>

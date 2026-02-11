@@ -409,6 +409,66 @@ public class BusinessSettingsServiceTests
         _autoResponseRepoMock.Verify(r => r.UpdateAsync(It.IsAny<BusinessAutoResponse>()), Times.Never);
     }
 
+    // ========== CurrentUserId from users table join Tests ==========
+
+    [Test]
+    public async Task GetBusinessSettingsAsync_ShouldReturnCurrentUserId_WhenBusinessUserExists()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var expectedUserId = Guid.NewGuid();
+        var business = new Business { Id = businessId, Name = "Test Business" };
+        var settings = new BusinessSettings
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = businessId,
+            ReviewsPrivate = false,
+            DndModeEnabled = false
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
+        _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
+            .ReturnsAsync(settings);
+        _businessRepoMock.Setup(r => r.GetBusinessUserIdByBusinessIdAsync(businessId))
+            .ReturnsAsync(expectedUserId);
+
+        // Act
+        var result = await _service.GetBusinessSettingsAsync(businessId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.CurrentUserId.Should().Be(expectedUserId);
+        _businessRepoMock.Verify(r => r.GetBusinessUserIdByBusinessIdAsync(businessId), Times.Once);
+    }
+
+    [Test]
+    public async Task GetBusinessSettingsAsync_ShouldReturnNullCurrentUserId_WhenNoBusinessUserExists()
+    {
+        // Arrange
+        var businessId = Guid.NewGuid();
+        var business = new Business { Id = businessId, Name = "Test Business" };
+        var settings = new BusinessSettings
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = businessId,
+            ReviewsPrivate = false,
+            DndModeEnabled = false
+        };
+
+        _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
+        _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
+            .ReturnsAsync(settings);
+        _businessRepoMock.Setup(r => r.GetBusinessUserIdByBusinessIdAsync(businessId))
+            .ReturnsAsync((Guid?)null);
+
+        // Act
+        var result = await _service.GetBusinessSettingsAsync(businessId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.CurrentUserId.Should().BeNull();
+    }
+
     [Test]
     public void ExtendDndModeAsync_ShouldThrow_WhenDndModeNotEnabled()
     {
