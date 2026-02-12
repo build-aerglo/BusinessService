@@ -631,9 +631,10 @@ public async Task UpdateProfileAsync(Business business)
         const string sql = """
                                SELECT u.id
                                FROM users u
-                               JOIN business b ON u.email = b.business_email
-                               WHERE b.id = @BusinessId
-                                 AND u.user_type = 'business_user'
+                               WHERE u.email = (
+                                   SELECT b.business_email FROM business b WHERE b.id = @BusinessId
+                               )
+                               AND u.user_type = 'business_user'
                                LIMIT 1;
                            """;
 
