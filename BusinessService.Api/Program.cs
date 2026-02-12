@@ -6,6 +6,7 @@ using BusinessService.Domain.Repositories;
 using BusinessService.Infrastructure.Clients;
 using BusinessService.Infrastructure.Context;
 using BusinessService.Infrastructure.Repositories;
+using BusinessService.Infrastructure.PaymentInitiators.Paystack;
 using BusinessService.Infrastructure.Utility;
 using Dapper;
 
@@ -47,6 +48,7 @@ builder.Services.AddScoped<IBranchComparisonRepository, BranchComparisonReposito
 builder.Services.AddScoped<ICompetitorComparisonRepository, CompetitorComparisonRepository>();
 builder.Services.AddScoped<ICompetitorComparisonSnapshotRepository, CompetitorComparisonSnapshotRepository>();
 builder.Services.AddScoped<IBusinessAutoResponseRepository, BusinessAutoResponseRepository>();
+builder.Services.AddScoped<ISubscriptionInvoiceRepository, SubscriptionInvoiceRepository>();
 
 // Register application services (application layer)
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
@@ -64,6 +66,7 @@ builder.Services.AddScoped<IBusinessClaimService, BusinessClaimService>();
 builder.Services.AddScoped<IExternalSourceService, ExternalSourceService>();
 builder.Services.AddScoped<IBusinessAnalyticsService, BusinessAnalyticsService>();
 builder.Services.AddScoped<IBusinessAutoResponseService, BusinessAutoResponseService>();
+builder.Services.AddScoped<ISubscriptionInvoiceService, SubscriptionInvoiceService>();
 
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Faq>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());
@@ -102,6 +105,23 @@ builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(10);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     
+});
+
+builder.Services.AddHttpClient<IPaymentInitiator, PaystackPaymentInitiator>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+builder.Services.AddHttpClient<INotificationServiceClient, NotificationServiceClient>(client =>
+{
+    var notificationServiceUrl = builder.Configuration["Services:NotificationServiceUrl"];
+    if (string.IsNullOrWhiteSpace(notificationServiceUrl))
+        throw new InvalidOperationException("Missing configuration: NotificationServiceUrl");
+
+    client.BaseAddress = new Uri(notificationServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
 builder.Services.AddHostedService<DndModeExpiryBackgroundService>();
