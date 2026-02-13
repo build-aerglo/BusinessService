@@ -106,6 +106,7 @@ public class BusinessService : IBusinessService
         Id = Guid.NewGuid(),
         Name = request.Name,
         Website = request.Website,
+        BusinessEmail = request.Email,
         IsBranch = request.ParentBusinessId.HasValue,
         ParentBusinessId = request.ParentBusinessId,
         AvgRating = 0,

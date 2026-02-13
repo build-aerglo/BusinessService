@@ -87,7 +87,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         {
             try
             {
-                await SendInvoiceNotificationAsync(invoice, plan);
+                await SendInvoiceNotificationAsync(invoice, plan, business);
             }
             catch (Exception ex)
             {
@@ -136,7 +136,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         );
     }
 
-    private async Task SendInvoiceNotificationAsync(SubscriptionInvoice invoice, SubscriptionPlan plan)
+    private async Task SendInvoiceNotificationAsync(SubscriptionInvoice invoice, SubscriptionPlan plan, Business business)
     {
         var now = DateTime.UtcNow;
         var endDate = invoice.IsAnnual ? now.AddYears(1) : now.AddMonths(1);
@@ -148,7 +148,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
 
         var payload = new Dictionary<string, object>
         {
-            { "status", "unpaid" },
+            { "status", "UNPAID" },
             { "description", description },
             { "payment_amount", amount },
             { "charges_description", _chargesDescription },
@@ -156,7 +156,11 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             { "total", total },
             { "invoice_date", now.ToString(_dateFormat) },
             { "due_date", now.ToString(_dateFormat) },
-            { "invoice_id", invoice.Id }
+            { "invoice_id", invoice.Id },
+            { "email", business.BusinessEmail ?? "" },
+            { "address", business.BusinessAddress ?? "" },
+            { "name", business.Name ?? "" },
+            { "color", "green" }
         };
 
         await _notificationClient.SendNotificationAsync(new NotificationRequest
