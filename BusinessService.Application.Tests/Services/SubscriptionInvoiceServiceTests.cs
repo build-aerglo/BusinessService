@@ -105,7 +105,8 @@ public class SubscriptionInvoiceServiceTests
             inv.Platform == "paystack" &&
             inv.Reference == "ref_123" &&
             inv.PaymentUrl == "https://paystack.co/pay/abc" &&
-            inv.Status == "unpaid"
+            inv.Status == "unpaid" &&
+            inv.Payload != null
         )), Times.Once);
     }
 

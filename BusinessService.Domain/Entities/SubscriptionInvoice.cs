@@ -12,4 +12,5 @@ public class SubscriptionInvoice
     public string? Reference { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? Status { get; set; } = "unpaid";
+    public string? Payload { get; set; }
 }

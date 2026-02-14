@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BusinessService.Application.DTOs.Subscription;
 using BusinessService.Application.Interfaces;
 using BusinessService.Domain.Entities;
@@ -70,10 +71,34 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             throw new PaymentInitiationException(paymentResult.Error ?? "Payment initiation failed");
         }
 
+        // Build notification payload
+        var now = DateTime.UtcNow;
+        var endDate = request.IsAnnual ? now.AddYears(1) : now.AddMonths(1);
+        var description = $"Tier {(int)plan.Tier} - {plan.Name} - subscription payment ({now.ToString(_dateFormat)} - {endDate.ToString(_dateFormat)})";
+
+        var invoiceId = Guid.NewGuid();
+        var payload = new Dictionary<string, object>
+        {
+            { "status", "UNPAID" },
+            { "description", description },
+            { "payment_amount", baseAmount },
+            { "charges_description", _chargesDescription },
+            { "charges_amount", chargesAmount },
+            { "vat", vatAmount },
+            { "total", totalAmount },
+            { "invoice_date", now.ToString(_dateFormat) },
+            { "due_date", now.ToString(_dateFormat) },
+            { "invoice_id", invoiceId },
+            { "email", business.BusinessEmail ?? "" },
+            { "address", business.BusinessAddress ?? "" },
+            { "name", business.Name ?? "" },
+            { "color", "green" }
+        };
+
         // Insert subscription invoice
         var invoice = new SubscriptionInvoice
         {
-            Id = Guid.NewGuid(),
+            Id = invoiceId,
             IsAnnual = request.IsAnnual,
             BusinessId = request.BusinessId,
             Platform = platform,
@@ -82,7 +107,8 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             Email = request.Email,
             Reference = paymentResult.Reference,
             Status = "unpaid",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            Payload = JsonSerializer.Serialize(payload)
         };
 
         await _invoiceRepository.AddAsync(invoice);
@@ -92,7 +118,13 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         {
             try
             {
-                await SendInvoiceNotificationAsync(invoice, plan, business);
+                await _notificationClient.SendNotificationAsync(new NotificationRequest
+                {
+                    Template = "invoice",
+                    Channel = "email",
+                    Recipient = invoice.Email,
+                    Payload = payload
+                });
             }
             catch (Exception ex)
             {
@@ -126,6 +158,12 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             );
         }
 
+        Dictionary<string, object>? payloadDict = null;
+        if (!string.IsNullOrEmpty(invoice.Payload))
+        {
+            payloadDict = JsonSerializer.Deserialize<Dictionary<string, object>>(invoice.Payload);
+        }
+
         return new SubscriptionInvoiceDto(
             Id: invoice.Id,
             IsAnnual: invoice.IsAnnual,
@@ -137,45 +175,8 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             Reference: invoice.Reference,
             CreatedAt: invoice.CreatedAt,
             Status: invoice.Status,
+            Payload: payloadDict,
             Subscription: planSummary
         );
-    }
-
-    private async Task SendInvoiceNotificationAsync(SubscriptionInvoice invoice, SubscriptionPlan plan, Business business)
-    {
-        var now = DateTime.UtcNow;
-        var endDate = invoice.IsAnnual ? now.AddYears(1) : now.AddMonths(1);
-        var baseAmount = invoice.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
-        var chargesAmount = Math.Ceiling(Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap));
-        var vatAmount = Math.Ceiling((baseAmount + chargesAmount) * _vatPercentage / 100m);
-        var total = baseAmount + chargesAmount + vatAmount;
-
-        var description = $"Tier {(int)plan.Tier} - {plan.Name} - subscription payment ({now.ToString(_dateFormat)} - {endDate.ToString(_dateFormat)})";
-
-        var payload = new Dictionary<string, object>
-        {
-            { "status", "UNPAID" },
-            { "description", description },
-            { "payment_amount", baseAmount },
-            { "charges_description", _chargesDescription },
-            { "charges_amount", chargesAmount },
-            { "vat", vatAmount },
-            { "total", total },
-            { "invoice_date", now.ToString(_dateFormat) },
-            { "due_date", now.ToString(_dateFormat) },
-            { "invoice_id", invoice.Id },
-            { "email", business.BusinessEmail ?? "" },
-            { "address", business.BusinessAddress ?? "" },
-            { "name", business.Name ?? "" },
-            { "color", "green" }
-        };
-
-        await _notificationClient.SendNotificationAsync(new NotificationRequest
-        {
-            Template = "invoice",
-            Channel = "email",
-            Recipient = invoice.Email,
-            Payload = payload
-        });
     }
 }

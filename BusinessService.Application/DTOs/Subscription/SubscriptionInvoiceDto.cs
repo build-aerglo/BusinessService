@@ -25,6 +25,7 @@ public record SubscriptionInvoiceDto(
     string? Reference,
     DateTime CreatedAt,
     string? Status,
+    Dictionary<string, object>? Payload,
     SubscriptionPlanSummaryDto? Subscription
 );
 

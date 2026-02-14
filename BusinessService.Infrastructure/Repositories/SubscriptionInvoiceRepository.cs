@@ -19,10 +19,11 @@ public class SubscriptionInvoiceRepository : ISubscriptionInvoiceRepository
         const string sql = """
                                INSERT INTO subscription_invoice (
                                    id, is_annual, business_id, platform, subscription_id,
-                                   payment_url, email, reference, created_at, status
+                                   payment_url, email, reference, created_at, status, payload
                                ) VALUES (
                                    @Id, @IsAnnual, @BusinessId, @Platform, @SubscriptionId,
-                                   @PaymentUrl, @Email, @Reference, @CreatedAt, @Status
+                                   @PaymentUrl, @Email, @Reference, @CreatedAt, @Status,
+                                   CAST(@Payload AS JSONB)
                                );
                            """;
 
