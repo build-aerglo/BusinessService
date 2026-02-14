@@ -17,8 +17,8 @@ public class NotificationServiceClient : INotificationServiceClient
 
     public async Task SendNotificationAsync(NotificationRequest request)
     {
-        _logger.LogInformation("Sending {Template} notification via {Channel} to {Recipient}",
-            request.Template, request.Channel, request.Recipient);
+        _logger.LogInformation("Sending {Template} notification via {Channel} to {Recipient}. Payload: {@Payload}",
+            request.Template, request.Channel, request.Recipient, request.Payload);
 
         try
         {
@@ -26,8 +26,13 @@ public class NotificationServiceClient : INotificationServiceClient
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Notification service returned {StatusCode} for {Template} to {Recipient}",
-                    response.StatusCode, request.Template, request.Recipient);
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Notification service returned {StatusCode} for {Template} to {Recipient}. Response: {Body}",
+                    response.StatusCode, request.Template, request.Recipient, body);
+            }
+            else
+            {
+                _logger.LogInformation("Notification sent successfully for {Template} to {Recipient}", request.Template, request.Recipient);
             }
         }
         catch (HttpRequestException ex)

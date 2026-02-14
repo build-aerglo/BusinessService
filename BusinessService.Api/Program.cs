@@ -120,7 +120,7 @@ builder.Services.AddHttpClient<INotificationServiceClient, NotificationServiceCl
         throw new InvalidOperationException("Missing configuration: NotificationServiceUrl");
 
     client.BaseAddress = new Uri(notificationServiceUrl);
-    client.Timeout = TimeSpan.FromSeconds(10);
+    client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
