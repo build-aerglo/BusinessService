@@ -54,8 +54,8 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
 
         var platform = request.Platform ?? "paystack";
         var baseAmount = request.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
-        var chargesAmount = Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap);
-        var vatAmount = (baseAmount + chargesAmount) * _vatPercentage / 100m;
+        var chargesAmount = Math.Ceiling(Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap));
+        var vatAmount = Math.Ceiling((baseAmount + chargesAmount) * _vatPercentage / 100m);
         var totalAmount = baseAmount + chargesAmount + vatAmount;
 
         // Initiate payment
@@ -146,8 +146,8 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         var now = DateTime.UtcNow;
         var endDate = invoice.IsAnnual ? now.AddYears(1) : now.AddMonths(1);
         var baseAmount = invoice.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
-        var chargesAmount = Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap);
-        var vatAmount = (baseAmount + chargesAmount) * _vatPercentage / 100m;
+        var chargesAmount = Math.Ceiling(Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap));
+        var vatAmount = Math.Ceiling((baseAmount + chargesAmount) * _vatPercentage / 100m);
         var total = baseAmount + chargesAmount + vatAmount;
 
         var description = $"Tier {(int)plan.Tier} - {plan.Name} - subscription payment ({now.ToString(_dateFormat)} - {endDate.ToString(_dateFormat)})";
