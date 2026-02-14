@@ -20,6 +20,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
     private readonly string _chargesDescription;
     private readonly decimal _chargesPercentage;
     private readonly decimal _chargesCap;
+    private readonly decimal _vatPercentage;
 
     public SubscriptionInvoiceService(
         ISubscriptionInvoiceRepository invoiceRepository,
@@ -40,6 +41,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         _chargesDescription = configuration["Invoice:ChargesDescription"] ?? "Paystack Transaction Fee - (1.5%)";
         _chargesPercentage = decimal.TryParse(configuration["Invoice:ChargesPercentage"], out var pct) ? pct : 1.5m;
         _chargesCap = decimal.TryParse(configuration["Invoice:ChargesCap"], out var cap) ? cap : 2000m;
+        _vatPercentage = decimal.TryParse(configuration["Invoice:VatPercentage"], out var vat) ? vat : 7.5m;
     }
 
     public async Task<CheckoutResponse> CheckoutAsync(CheckoutRequest request)
@@ -51,13 +53,16 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
                    ?? throw new SubscriptionNotFoundException($"Subscription plan {request.SubscriptionId} not found.");
 
         var platform = request.Platform ?? "paystack";
-        var amount = request.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
+        var baseAmount = request.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
+        var chargesAmount = Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap);
+        var vatAmount = (baseAmount + chargesAmount) * _vatPercentage / 100m;
+        var totalAmount = baseAmount + chargesAmount + vatAmount;
 
         // Initiate payment
         var paymentResult = await _paymentInitiator.InitiatePaymentAsync(new PaymentInitiationRequest
         {
             Email = request.Email,
-            Amount = amount
+            Amount = totalAmount
         });
 
         if (!paymentResult.Success)
@@ -140,9 +145,10 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
     {
         var now = DateTime.UtcNow;
         var endDate = invoice.IsAnnual ? now.AddYears(1) : now.AddMonths(1);
-        var amount = invoice.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
-        var chargesAmount = Math.Min(amount * _chargesPercentage / 100m, _chargesCap);
-        var total = amount + chargesAmount;
+        var baseAmount = invoice.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
+        var chargesAmount = Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap);
+        var vatAmount = (baseAmount + chargesAmount) * _vatPercentage / 100m;
+        var total = baseAmount + chargesAmount + vatAmount;
 
         var description = $"Tier {(int)plan.Tier} - {plan.Name} - subscription payment ({now.ToString(_dateFormat)} - {endDate.ToString(_dateFormat)})";
 
@@ -150,9 +156,10 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         {
             { "status", "UNPAID" },
             { "description", description },
-            { "payment_amount", amount },
+            { "payment_amount", baseAmount },
             { "charges_description", _chargesDescription },
             { "charges_amount", chargesAmount },
+            { "vat", vatAmount },
             { "total", total },
             { "invoice_date", now.ToString(_dateFormat) },
             { "due_date", now.ToString(_dateFormat) },

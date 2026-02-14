@@ -144,9 +144,10 @@ public class SubscriptionInvoiceServiceTests
         var result = await _service.CheckoutAsync(request);
 
         // Assert
+        // 150000 base + 2000 charges (1.5% = 2250, capped at 2000) + 11400 VAT (7.5% of 152000) = 163400
         result.Should().NotBeNull();
         _paymentInitiatorMock.Verify(p => p.InitiatePaymentAsync(It.Is<PaymentInitiationRequest>(
-            r => r.Amount == 150000m
+            r => r.Amount == 163400m
         )), Times.Once);
     }
 

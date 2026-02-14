@@ -17,8 +17,8 @@ public class NotificationServiceClient : INotificationServiceClient
 
     public async Task SendNotificationAsync(NotificationRequest request)
     {
-        _logger.LogInformation("Sending {Template} notification via {Channel} to {Recipient}. Payload: {@Payload}",
-            request.Template, request.Channel, request.Recipient, request.Payload);
+        _logger.LogInformation("Sending {Template} notification via {Channel} to {Recipient}",
+            request.Template, request.Channel, request.Recipient);
 
         try
         {
