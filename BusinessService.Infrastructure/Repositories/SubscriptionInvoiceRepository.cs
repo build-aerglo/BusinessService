@@ -41,4 +41,31 @@ public class SubscriptionInvoiceRepository : ISubscriptionInvoiceRepository
         using var conn = _context.CreateConnection();
         return await conn.QuerySingleOrDefaultAsync<SubscriptionInvoice>(sql, new { id });
     }
+    
+    public async Task UpdateStatusAsync(Guid invoiceId, string status, string? errorMessage)
+    {
+        var updatedInvoiceStatus = status == "success" ? "paid" : "unpaid";
+        const string sql = """
+                               UPDATE subscription_invoice SET payment_status = @PaymentStatus, status = @Status, error = @Error WHERE id = @Id;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            PaymentStatus = updatedInvoiceStatus,
+            Status = status,
+            Error = errorMessage,
+            Id = invoiceId
+        });
+    }
+    
+    public async Task<SubscriptionInvoiceWithError?> FindByReferenceAsync(string reference)
+    {
+        const string sql = """
+                               SELECT * FROM subscription_invoice WHERE reference = @reference;
+                           """;
+
+        using var conn = _context.CreateConnection();
+        return await conn.QuerySingleOrDefaultAsync<SubscriptionInvoiceWithError>(sql, new { reference });
+    }
 }

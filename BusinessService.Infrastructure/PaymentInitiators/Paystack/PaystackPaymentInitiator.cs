@@ -80,7 +80,93 @@ public class PaystackPaymentInitiator : IPaymentInitiator
             );
         }
     }
+    
+    public async Task<PaymentVerificationResult> VerifyTransactionAsync(string reference)
+{
+    if (string.IsNullOrWhiteSpace(reference))
+        return new PaymentVerificationResult(false, null, "Invalid reference");
+
+    _logger.LogInformation("Verifying Paystack transaction with reference {Reference}", reference);
+
+    try
+    {
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://api.paystack.co/transaction/verify/{reference}");
+
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _secretKey);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Paystack verification HTTP error: {StatusCode}", response.StatusCode);
+
+            return new PaymentVerificationResult(
+                Success: false,
+                Status: null,
+                Error: $"HTTP Error: {response.StatusCode}"
+            );
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<PaystackVerifyResponse>();
+
+        if (result is { Status: true } && result.Data != null)
+        {
+            _logger.LogInformation(
+                "Paystack verification successful. Reference {Reference}, Status {Status}",
+                reference,
+                result.Data.Status);
+
+            return new PaymentVerificationResult(
+                Success: true,
+                Status: result.Data.Status, // ← this is what you care about
+                Error: null
+            );
+        }
+
+        _logger.LogWarning("Paystack verification failed: {Message}", result?.Message);
+
+        return new PaymentVerificationResult(
+            Success: false,
+            Status: null,
+            Error: result?.Message ?? "Verification failed"
+        );
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error verifying Paystack transaction {Reference}", reference);
+
+        return new PaymentVerificationResult(
+            Success: false,
+            Status: null,
+            Error: ex.Message
+        );
+    }
 }
+
+}
+
+
+internal class PaystackVerifyResponse
+{
+    [JsonPropertyName("status")]
+    public bool Status { get; set; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = default!;
+
+    [JsonPropertyName("data")]
+    public PaystackVerifyData Data { get; set; } = default!;
+}
+
+internal class PaystackVerifyData
+{
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = default!;
+}
+
 
 internal class PaystackInitializeResponse
 {

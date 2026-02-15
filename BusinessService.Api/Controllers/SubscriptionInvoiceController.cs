@@ -70,4 +70,22 @@ public class SubscriptionInvoiceController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while fetching the invoice" });
         }
     }
+    
+    /// <summary>
+    /// Validate Payment with reference
+    /// </summary>
+    [HttpGet("validate-payment/{reference}")]
+    public async Task<ActionResult<SubscriptionInvoiceDto>> ValidatePayment(string reference)
+    {
+        try
+        {
+            var invoice = await _invoiceService.ConfirmInvoiceAsync(reference);
+            return Ok(invoice);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating payment {Reference}", reference);
+            return StatusCode(500, new { message = "An error occurred while validating the payment" });
+        }
+    }
 }

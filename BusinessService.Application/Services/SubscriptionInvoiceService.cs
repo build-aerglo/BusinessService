@@ -16,6 +16,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
     private readonly IBusinessRepository _businessRepository;
     private readonly IPaymentInitiator _paymentInitiator;
     private readonly INotificationServiceClient _notificationClient;
+    private readonly ISubscriptionService _subscriptionService;
     private readonly ILogger<SubscriptionInvoiceService> _logger;
     private readonly string _dateFormat;
     private readonly string _chargesDescription;
@@ -29,6 +30,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         IBusinessRepository businessRepository,
         IPaymentInitiator paymentInitiator,
         INotificationServiceClient notificationClient,
+        ISubscriptionService subscriptionService,
         IConfiguration configuration,
         ILogger<SubscriptionInvoiceService> logger)
     {
@@ -37,6 +39,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
         _businessRepository = businessRepository;
         _paymentInitiator = paymentInitiator;
         _notificationClient = notificationClient;
+        _subscriptionService = subscriptionService;
         _logger = logger;
         _dateFormat = configuration["Invoice:DateFormat"] ?? "dd/MM/yyyy";
         _chargesDescription = configuration["Invoice:ChargesDescription"] ?? "Paystack Transaction Fee - (1.5%)";
@@ -92,7 +95,7 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             { "email", business.BusinessEmail ?? "" },
             { "address", business.BusinessAddress ?? "" },
             { "name", business.Name ?? "" },
-            { "color", "green" }
+            { "color", "red" }
         };
 
         // Insert subscription invoice
@@ -178,5 +181,77 @@ public class SubscriptionInvoiceService : ISubscriptionInvoiceService
             Payload: payloadDict,
             Subscription: planSummary
         );
+    }
+
+    public async Task<PaymentVerificationResult> ConfirmInvoiceAsync(string reference)
+    {
+        
+        var invoice = await _invoiceRepository.FindByReferenceAsync(reference);
+        if (invoice == null) return new PaymentVerificationResult(
+            Success: false,
+            Status: null,
+            Error: "Invoice reference error"
+        );
+
+        if (invoice.Status is "success" or "failed")
+        {
+            return new PaymentVerificationResult(
+                Success: true,
+                Status: invoice.Status,
+                Error: invoice.Error
+            );
+        }
+        
+        // else - pending - confirm from paystack 
+        var paymentResult = await _paymentInitiator.VerifyTransactionAsync(invoice.Reference!);
+        
+        // update invoice status
+        await _invoiceRepository.UpdateStatusAsync(invoice.Id, paymentResult.Status!, paymentResult.Error);
+
+        // initial confirmation, send notification and upgrade business
+        if (paymentResult.Status == "success")
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // update user subscription
+                    var upgradeBusiness = new UpgradeSubscriptionRequest{
+                        BusinessId= invoice.BusinessId, 
+                        NewPlanId= invoice.SubscriptionId, 
+                        IsAnnual= invoice.IsAnnual, 
+                        PaymentReference= reference};
+                    await _subscriptionService.UpgradeSubscriptionAsync(upgradeBusiness);
+                    
+                    // send new invoice notification
+                    Dictionary<string, object>? payloadDict = null;
+                    if (!string.IsNullOrEmpty(invoice.Payload))
+                    {
+                        payloadDict = JsonSerializer.Deserialize<Dictionary<string, object>>(invoice.Payload);
+
+                        if (payloadDict != null)
+                        {
+                            payloadDict["status"] = "PAID";
+                            payloadDict["color"] = "green";
+                        }
+                    }
+                    
+                    await _notificationClient.SendNotificationAsync(new NotificationRequest
+                    {
+                        Template = "invoice",
+                        Channel = "email",
+                        Recipient = invoice.Email,
+                        Payload = payloadDict!
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send invoice notification for invoice {InvoiceId}", invoice.Id);
+                }
+            });
+        }
+        
+        // return response
+        return paymentResult;
     }
 }

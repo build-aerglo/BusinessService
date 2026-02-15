@@ -3,6 +3,7 @@ namespace BusinessService.Application.Interfaces;
 public interface IPaymentInitiator
 {
     Task<PaymentInitiationResult> InitiatePaymentAsync(PaymentInitiationRequest request);
+    Task<PaymentVerificationResult> VerifyTransactionAsync(string reference);
 }
 
 public class PaymentInitiationRequest
@@ -12,6 +13,12 @@ public class PaymentInitiationRequest
     public string? CallbackUrl { get; set; }
     public Dictionary<string, string>? Metadata { get; set; }
 }
+
+public record PaymentVerificationResult(
+    bool Success,
+    string? Status,
+    string? Error
+);
 
 public record PaymentInitiationResult(
     bool Success,

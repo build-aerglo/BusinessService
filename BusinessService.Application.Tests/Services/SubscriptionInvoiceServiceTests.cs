@@ -19,6 +19,7 @@ public class SubscriptionInvoiceServiceTests
     private Mock<IBusinessRepository> _businessRepoMock = null!;
     private Mock<IPaymentInitiator> _paymentInitiatorMock = null!;
     private Mock<INotificationServiceClient> _notificationClientMock = null!;
+    private Mock <ISubscriptionService> _subscriptionServiceMock = null!;
     private Mock<ILogger<SubscriptionInvoiceService>> _loggerMock = null!;
     private IConfiguration _configuration = null!;
     private SubscriptionInvoiceService _service = null!;
@@ -31,6 +32,7 @@ public class SubscriptionInvoiceServiceTests
         _businessRepoMock = new Mock<IBusinessRepository>();
         _paymentInitiatorMock = new Mock<IPaymentInitiator>();
         _notificationClientMock = new Mock<INotificationServiceClient>();
+        _subscriptionServiceMock = new Mock<ISubscriptionService>();
         _loggerMock = new Mock<ILogger<SubscriptionInvoiceService>>();
 
         var configData = new Dictionary<string, string?>
@@ -51,6 +53,7 @@ public class SubscriptionInvoiceServiceTests
             _businessRepoMock.Object,
             _paymentInitiatorMock.Object,
             _notificationClientMock.Object,
+            _subscriptionServiceMock.Object,
             _configuration,
             _loggerMock.Object
         );

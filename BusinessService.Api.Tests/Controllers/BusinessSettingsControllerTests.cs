@@ -27,6 +27,7 @@ public class BusinessSettingsControllerTests
     private static BusinessSettingsDto CreateBusinessSettingsDto(
         Guid businessId,
         Guid? modifiedByUserId = null,
+        Guid? currentUserId = null,
         bool reviewsPrivate = false,
         DateTime? reviewsPrivateEnabledAt = null,
         string? privateReviewsReason = null,
@@ -71,7 +72,8 @@ public class BusinessSettingsControllerTests
 
             CreatedAt: now,
             UpdatedAt: now,
-            ModifiedByUserId: modifiedByUserId
+            ModifiedByUserId: modifiedByUserId,
+            CurrentUserId: currentUserId
         );
     }
 
