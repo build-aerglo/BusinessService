@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     
     env:
-      PROJECT_PATH: ./src/BusinessService.Api/BusinessService.Api.csproj
+      PROJECT_PATH: ./BusinessService.Api/BusinessService.Api.csproj
       
     steps:
       - name: Checkout repo
