@@ -207,9 +207,10 @@ public class BusinessService : IBusinessService
             ?? throw new BusinessNotFoundException($"Business {id} not found.");
 
         // Track if email or phone changed for verification status update
-        var emailChanged = request.BusinessEmail != null && request.BusinessEmail != business.BusinessEmail;
+        // var emailChanged = request.BusinessEmail != null && request.BusinessEmail != business.BusinessEmail;
         var phoneChanged = request.BusinessPhoneNumber != null && request.BusinessPhoneNumber != business.BusinessPhoneNumber;
-
+        var emailChanged = false;
+        
         if (request.CategoryIds != null && request.CategoryIds.Count > 0)
         {
             var categories = await _categoryRepository.FindAllByIdsAsync(request.CategoryIds);
@@ -225,7 +226,7 @@ public class BusinessService : IBusinessService
             business.Categories = categories; // Now contains all valid categories
         }
 
-        business.Name = request.Name ?? business.Name;
+        business.Name = business.Name;
         business.Website = request.Website ?? business.Website;
         business.BusinessAddress = request.BusinessAddress ?? business.BusinessAddress;
         business.Logo = request.Logo ?? business.Logo;
