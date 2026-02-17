@@ -8,7 +8,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
+    env:
+      PROJECT_PATH: ./src/BusinessService.Api/BusinessService.Api.csproj
+      
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -16,7 +19,7 @@ jobs:
       # ---------- SAFETY CHECK 1: Ensure project file exists ----------
       - name: Verify project file exists
         run: |
-          if [ ! -f "${{ secrets.SMARTER_FTP_PROJECT_PATH }}" ]; then
+          if [ ! -f "$PROJECT_PATH" ]; then
             echo "Project file not found. Aborting deploy."
             exit 1
           fi
@@ -29,11 +32,11 @@ jobs:
 
       # ---------- Restore ----------
       - name: Restore dependencies
-        run: dotnet restore ${{ secrets.SMARTER_FTP_PROJECT_PATH }}
+        run: dotnet restore $PROJECT_PATH
 
       # ---------- Build ----------
       - name: Build
-        run: dotnet build ${{ secrets.SMARTER_FTP_PROJECT_PATH }} --configuration Release --no-restore
+        run: dotnet build $PROJECT_PATH --configuration Release --no-restore
 
       # ---------- SAFETY CHECK 2: Optional tests ----------
       - name: Run tests
@@ -41,7 +44,7 @@ jobs:
 
       # ---------- Publish ----------
       - name: Publish
-        run: dotnet publish ${{ secrets.SMARTER_FTP_PROJECT_PATH }} -c Release -o publish
+        run: dotnet publish $PROJECT_PATH -c Release -o publish
 
       # ---------- SAFETY CHECK 3: Ensure publish folder not empty ----------
       - name: Validate publish output
