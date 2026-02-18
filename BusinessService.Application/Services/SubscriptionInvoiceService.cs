@@ -1,0 +1,257 @@
+using System.Text.Json;
+using BusinessService.Application.DTOs.Subscription;
+using BusinessService.Application.Interfaces;
+using BusinessService.Domain.Entities;
+using BusinessService.Domain.Exceptions;
+using BusinessService.Domain.Repositories;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace BusinessService.Application.Services;
+
+public class SubscriptionInvoiceService : ISubscriptionInvoiceService
+{
+    private readonly ISubscriptionInvoiceRepository _invoiceRepository;
+    private readonly ISubscriptionPlanRepository _planRepository;
+    private readonly IBusinessRepository _businessRepository;
+    private readonly IPaymentInitiator _paymentInitiator;
+    private readonly INotificationServiceClient _notificationClient;
+    private readonly ISubscriptionService _subscriptionService;
+    private readonly ILogger<SubscriptionInvoiceService> _logger;
+    private readonly string _dateFormat;
+    private readonly string _chargesDescription;
+    private readonly decimal _chargesPercentage;
+    private readonly decimal _chargesCap;
+    private readonly decimal _vatPercentage;
+
+    public SubscriptionInvoiceService(
+        ISubscriptionInvoiceRepository invoiceRepository,
+        ISubscriptionPlanRepository planRepository,
+        IBusinessRepository businessRepository,
+        IPaymentInitiator paymentInitiator,
+        INotificationServiceClient notificationClient,
+        ISubscriptionService subscriptionService,
+        IConfiguration configuration,
+        ILogger<SubscriptionInvoiceService> logger)
+    {
+        _invoiceRepository = invoiceRepository;
+        _planRepository = planRepository;
+        _businessRepository = businessRepository;
+        _paymentInitiator = paymentInitiator;
+        _notificationClient = notificationClient;
+        _subscriptionService = subscriptionService;
+        _logger = logger;
+        _dateFormat = configuration["Invoice:DateFormat"] ?? "dd/MM/yyyy";
+        _chargesDescription = configuration["Invoice:ChargesDescription"] ?? "Paystack Transaction Fee - (1.5%)";
+        _chargesPercentage = decimal.TryParse(configuration["Invoice:ChargesPercentage"], out var pct) ? pct : 1.5m;
+        _chargesCap = decimal.TryParse(configuration["Invoice:ChargesCap"], out var cap) ? cap : 2000m;
+        _vatPercentage = decimal.TryParse(configuration["Invoice:VatPercentage"], out var vat) ? vat : 7.5m;
+    }
+
+    public async Task<CheckoutResponse> CheckoutAsync(CheckoutRequest request)
+    {
+        var business = await _businessRepository.FindByIdAsync(request.BusinessId)
+                       ?? throw new BusinessNotFoundException($"Business {request.BusinessId} not found.");
+
+        var plan = await _planRepository.FindByIdAsync(request.SubscriptionId)
+                   ?? throw new SubscriptionNotFoundException($"Subscription plan {request.SubscriptionId} not found.");
+
+        var platform = request.Platform ?? "paystack";
+        var baseAmount = request.IsAnnual ? plan.AnnualPrice : plan.MonthlyPrice;
+        var chargesAmount = Math.Ceiling(Math.Min(baseAmount * _chargesPercentage / 100m, _chargesCap));
+        var vatAmount = Math.Ceiling((baseAmount + chargesAmount) * _vatPercentage / 100m);
+        var totalAmount = baseAmount + chargesAmount + vatAmount;
+
+        // Initiate payment
+        var paymentResult = await _paymentInitiator.InitiatePaymentAsync(new PaymentInitiationRequest
+        {
+            Email = request.Email,
+            Amount = totalAmount
+        });
+
+        if (!paymentResult.Success)
+        {
+            throw new PaymentInitiationException(paymentResult.Error ?? "Payment initiation failed");
+        }
+
+        // Build notification payload
+        var now = DateTime.UtcNow;
+        var endDate = request.IsAnnual ? now.AddYears(1) : now.AddMonths(1);
+        var description = $"Tier {(int)plan.Tier} - {plan.Name} - subscription payment ({now.ToString(_dateFormat)} - {endDate.ToString(_dateFormat)})";
+
+        var invoiceId = Guid.NewGuid();
+        var payload = new Dictionary<string, object>
+        {
+            { "status", "UNPAID" },
+            { "description", description },
+            { "payment_amount", baseAmount },
+            { "charges_description", _chargesDescription },
+            { "charges_amount", chargesAmount },
+            { "vat", vatAmount },
+            { "total", totalAmount },
+            { "invoice_date", now.ToString(_dateFormat) },
+            { "due_date", now.ToString(_dateFormat) },
+            { "invoice_id", invoiceId },
+            { "email", business.BusinessEmail ?? "" },
+            { "address", business.BusinessAddress ?? "" },
+            { "name", business.Name ?? "" },
+            { "color", "red" }
+        };
+
+        // Insert subscription invoice
+        var invoice = new SubscriptionInvoice
+        {
+            Id = invoiceId,
+            IsAnnual = request.IsAnnual,
+            BusinessId = request.BusinessId,
+            Platform = platform,
+            SubscriptionId = request.SubscriptionId,
+            PaymentUrl = paymentResult.PaymentUrl,
+            Email = request.Email,
+            Reference = paymentResult.Reference,
+            Status = "unpaid",
+            CreatedAt = now,
+            Payload = JsonSerializer.Serialize(payload)
+        };
+
+        await _invoiceRepository.AddAsync(invoice);
+
+        // Send invoice notification (fire-and-forget)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _notificationClient.SendNotificationAsync(new NotificationRequest
+                {
+                    Template = "invoice",
+                    Channel = "email",
+                    Recipient = invoice.Email,
+                    Payload = payload
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send invoice notification for invoice {InvoiceId}", invoice.Id);
+            }
+        });
+
+        return new CheckoutResponse(
+            Message: "Transaction initiated",
+            Invoice: invoice.Id
+        );
+    }
+
+    public async Task<SubscriptionInvoiceDto?> GetInvoiceAsync(Guid invoiceId)
+    {
+        var invoice = await _invoiceRepository.FindByIdAsync(invoiceId);
+        if (invoice == null) return null;
+
+        var plan = await _planRepository.FindByIdAsync(invoice.SubscriptionId);
+
+        SubscriptionPlanSummaryDto? planSummary = null;
+        if (plan != null)
+        {
+            planSummary = new SubscriptionPlanSummaryDto(
+                Id: plan.Id,
+                Name: plan.Name,
+                Tier: plan.Tier.ToString(),
+                Description: plan.Description,
+                MonthlyPrice: plan.MonthlyPrice,
+                AnnualPrice: plan.AnnualPrice
+            );
+        }
+
+        Dictionary<string, object>? payloadDict = null;
+        if (!string.IsNullOrEmpty(invoice.Payload))
+        {
+            payloadDict = JsonSerializer.Deserialize<Dictionary<string, object>>(invoice.Payload);
+        }
+
+        return new SubscriptionInvoiceDto(
+            Id: invoice.Id,
+            IsAnnual: invoice.IsAnnual,
+            BusinessId: invoice.BusinessId,
+            Platform: invoice.Platform,
+            SubscriptionId: invoice.SubscriptionId,
+            PaymentUrl: invoice.PaymentUrl,
+            Email: invoice.Email,
+            Reference: invoice.Reference,
+            CreatedAt: invoice.CreatedAt,
+            Status: invoice.Status,
+            Payload: payloadDict,
+            Subscription: planSummary
+        );
+    }
+
+    public async Task<PaymentVerificationResult> ConfirmInvoiceAsync(string reference)
+    {
+        
+        var invoice = await _invoiceRepository.FindByReferenceAsync(reference);
+        if (invoice == null) return new PaymentVerificationResult(
+            Success: false,
+            Status: null,
+            Error: "Invoice reference error"
+        );
+
+        if (invoice.Status is "success" or "failed")
+        {
+            return new PaymentVerificationResult(
+                Success: true,
+                Status: invoice.Status,
+                Error: invoice.Error
+            );
+        }
+        
+        // else - pending - confirm from paystack 
+        var paymentResult = await _paymentInitiator.VerifyTransactionAsync(invoice.Reference!);
+        
+        // update invoice status
+        await _invoiceRepository.UpdateStatusAsync(invoice.Id, paymentResult.Status!, paymentResult.Error);
+
+        // initial confirmation, send notification and upgrade business
+        if (paymentResult.Status == "success")
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // update user subscription
+                    var upgradeBusiness = new UpgradeSubscriptionRequest{
+                        BusinessId= invoice.BusinessId, 
+                        NewPlanId= invoice.SubscriptionId, 
+                        IsAnnual= invoice.IsAnnual, 
+                        PaymentReference= reference};
+                    await _subscriptionService.UpgradeSubscriptionAsync(upgradeBusiness);
+                    
+                    // send new invoice notification
+                    Dictionary<string, object>? payloadDict = null;
+                    if (!string.IsNullOrEmpty(invoice.Payload))
+                    {
+                        payloadDict = JsonSerializer.Deserialize<Dictionary<string, object>>(invoice.Payload);
+
+                        if (payloadDict != null)
+                        {
+                            payloadDict["status"] = "PAID";
+                            payloadDict["color"] = "green";
+                        }
+                    }
+                    
+                    await _notificationClient.SendNotificationAsync(new NotificationRequest
+                    {
+                        Template = "invoice",
+                        Channel = "email",
+                        Recipient = invoice.Email,
+                        Payload = payloadDict!
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send invoice notification for invoice {InvoiceId}", invoice.Id);
+                }
+            });
+        }
+        
+        // return response
+        return paymentResult;
+    }
+}

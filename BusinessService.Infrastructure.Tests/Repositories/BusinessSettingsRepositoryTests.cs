@@ -44,6 +44,7 @@ public class BusinessSettingsRepositoryTests
         using var conn = new NpgsqlConnection(_connectionString);
         conn.Execute("DELETE FROM business_settings WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'RepoTest%');");
         conn.Execute("DELETE FROM business_rep_settings WHERE business_rep_id IN (SELECT id FROM business_reps WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'RepoTest%'));");
+        conn.Execute("DELETE FROM business_auto_response WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'RepoTest%');");
         conn.Execute("DELETE FROM business_reps WHERE business_id IN (SELECT id FROM business WHERE name LIKE 'RepoTest%');");
         conn.Execute("DELETE FROM business WHERE name LIKE 'RepoTest%';");
         conn.Execute("DELETE FROM users WHERE username LIKE 'repotest%';");

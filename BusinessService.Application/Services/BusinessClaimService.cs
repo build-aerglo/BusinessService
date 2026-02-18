@@ -44,6 +44,7 @@ public class BusinessClaimService : IBusinessClaimService
             CacDocumentUrl = request.CacDocumentUrl,
             IdDocumentUrl = request.IdDocumentUrl,
             ProofOfOwnershipUrl = request.ProofOfOwnershipUrl,
+            BusinessCategory = request.CategoryId,
             Status = ClaimRequestStatus.Pending,
             SubmittedAt = DateTime.UtcNow,
             Priority = ClaimPriority.Normal,

@@ -14,18 +14,21 @@ public class BusinessSettingsService : IBusinessSettingsService
     private readonly IBusinessRepository _businessRepository;
     private readonly IBusinessRepServiceClient _businessRepClient;
     private readonly IUserServiceClient _userServiceClient;
+    private readonly IBusinessAutoResponseRepository _autoResponseRepository;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public BusinessSettingsService(
         IBusinessSettingsRepository settingsRepository,
         IBusinessRepository businessRepository,
         IBusinessRepServiceClient businessRepClient,
-        IUserServiceClient userServiceClient)
+        IUserServiceClient userServiceClient,
+        IBusinessAutoResponseRepository autoResponseRepository)
     {
         _settingsRepository = settingsRepository;
         _businessRepository = businessRepository;
         _businessRepClient = businessRepClient;
         _userServiceClient = userServiceClient;
+        _autoResponseRepository = autoResponseRepository;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -54,7 +57,9 @@ public class BusinessSettingsService : IBusinessSettingsService
             }
         }
 
-        return MapToBusinessSettingsDto(settings);
+        var currentUserId = await _businessRepository.GetBusinessUserIdByBusinessIdAsync(businessId);
+
+        return MapToBusinessSettingsDto(settings, currentUserId);
     }
 
     public async Task<BusinessSettingsDto> UpdateBusinessSettingsAsync(
@@ -90,6 +95,21 @@ public class BusinessSettingsService : IBusinessSettingsService
             else
             {
                 settings.DisableDndMode();
+            }
+        }
+
+        if (request.PreferredModeOfContact != null)
+        {
+            await _businessRepository.UpdatePreferredContactMethodAsync(businessId, request.PreferredModeOfContact);
+        }
+
+        if (request.AutoResponseEnabled.HasValue)
+        {
+            var autoResponse = await _autoResponseRepository.FindByBusinessIdAsync(businessId);
+            if (autoResponse != null)
+            {
+                autoResponse.AllowAutoResponse = request.AutoResponseEnabled.Value;
+                await _autoResponseRepository.UpdateAsync(autoResponse);
             }
         }
 
@@ -279,7 +299,7 @@ public class BusinessSettingsService : IBusinessSettingsService
             throw new UnauthorizedSettingsAccessException("Only the parent business representative can modify business settings.");
     }
 
-    private BusinessSettingsDto MapToBusinessSettingsDto(BusinessSettings settings)
+    private BusinessSettingsDto MapToBusinessSettingsDto(BusinessSettings settings, Guid? currentUserId = null)
     {
         return new BusinessSettingsDto(
             settings.Id,
@@ -303,7 +323,8 @@ public class BusinessSettingsService : IBusinessSettingsService
             settings.ExternalSourcesConnected,
             settings.CreatedAt,
             settings.UpdatedAt,
-            settings.ModifiedByUserId
+            settings.ModifiedByUserId,
+            currentUserId
         );
     }
 

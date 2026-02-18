@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BusinessService.Application.DTOs;
+using BusinessService.Application.DTOs.Subscription;
 using BusinessService.Application.Interfaces;
 using BusinessService.Domain.Entities;
 using BusinessService.Domain.Exceptions;
@@ -16,8 +17,9 @@ public class BusinessService : IBusinessService
     private readonly IBusinessSearchProducer _searchProducer;
     private readonly ITagRepository _tagRepository;
     private readonly IBusinessVerificationRepository _verificationRepository;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository, IBusinessVerificationRepository verificationRepository)
+    public BusinessService(IBusinessRepository repository, ICategoryRepository categoryRepository, IQrCodeService qrCodeService,IBusinessSearchProducer searchProducer,ITagRepository tagRepository, IBusinessVerificationRepository verificationRepository, ISubscriptionService subscriptionService)
     {
         _repository = repository;
         _categoryRepository = categoryRepository;
@@ -25,6 +27,7 @@ public class BusinessService : IBusinessService
         _searchProducer = searchProducer;
         _tagRepository = tagRepository;
         _verificationRepository = verificationRepository;
+        _subscriptionService = subscriptionService;
     }
     
     private async Task<BusinessDto> MapToDto(Business business)
@@ -103,6 +106,7 @@ public class BusinessService : IBusinessService
         Id = Guid.NewGuid(),
         Name = request.Name,
         Website = request.Website,
+        BusinessEmail = request.Email,
         IsBranch = request.ParentBusinessId.HasValue,
         ParentBusinessId = request.ParentBusinessId,
         AvgRating = 0,
@@ -130,6 +134,22 @@ public class BusinessService : IBusinessService
         UpdatedAt = DateTime.UtcNow
     };
     await _verificationRepository.AddAsync(verification);
+
+    // Register default subscription for the new business
+    try
+    {
+        await _subscriptionService.CreateSubscriptionAsync(new CreateSubscriptionRequest
+        {
+            BusinessId = business.Id,
+            SubscriptionPlanId = Guid.Parse("cdd7c928-f88f-4a96-b3fc-00dc9b6ecb4f"),
+            IsAnnual = false,
+            PaymentReference = "initiation"
+        });
+    }
+    catch (Exception)
+    {
+        // Subscription creation failure should not block business creation
+    }
 
     var dto = await MapToDto(business);
     await _searchProducer.PublishBusinessCreatedAsync(dto);
@@ -187,9 +207,10 @@ public class BusinessService : IBusinessService
             ?? throw new BusinessNotFoundException($"Business {id} not found.");
 
         // Track if email or phone changed for verification status update
-        var emailChanged = request.BusinessEmail != null && request.BusinessEmail != business.BusinessEmail;
+        // var emailChanged = request.BusinessEmail != null && request.BusinessEmail != business.BusinessEmail;
         var phoneChanged = request.BusinessPhoneNumber != null && request.BusinessPhoneNumber != business.BusinessPhoneNumber;
-
+        var emailChanged = false;
+        
         if (request.CategoryIds != null && request.CategoryIds.Count > 0)
         {
             var categories = await _categoryRepository.FindAllByIdsAsync(request.CategoryIds);
@@ -205,7 +226,7 @@ public class BusinessService : IBusinessService
             business.Categories = categories; // Now contains all valid categories
         }
 
-        business.Name = request.Name ?? business.Name;
+        business.Name = business.Name;
         business.Website = request.Website ?? business.Website;
         business.BusinessAddress = request.BusinessAddress ?? business.BusinessAddress;
         business.Logo = request.Logo ?? business.Logo;

@@ -30,7 +30,8 @@ public record BusinessSettingsDto(
 
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    Guid? ModifiedByUserId
+    Guid? ModifiedByUserId,
+    Guid? CurrentUserId
 );
 
 /// <summary>
@@ -45,6 +46,7 @@ public class UpdateBusinessSettingsRequest
     public string? DndModeReason { get; set; }
     public string? DndModeMessage { get; set; }
     public bool? AutoResponseEnabled { get; set; }
+    public string? PreferredModeOfContact { get; set; }
 }
 
 /// <summary>

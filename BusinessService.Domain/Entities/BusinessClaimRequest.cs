@@ -46,6 +46,9 @@ public class BusinessClaimRequest
     // Expected review time (24-48 hours default)
     public DateTime ExpectedReviewBy { get; set; }
 
+    // Business category
+    public Guid? BusinessCategory { get; set; }
+
     // Audit fields
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
