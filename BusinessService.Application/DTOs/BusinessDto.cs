@@ -2,6 +2,7 @@ namespace BusinessService.Application.DTOs;
 
 public record BusinessDto(
     Guid Id,
+    Guid? UserId,
     string Name,
     string? Website,
     bool IsBranch,

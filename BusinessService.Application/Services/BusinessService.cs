@@ -48,6 +48,7 @@ public class BusinessService : IBusinessService
 
         return new BusinessDto(
             business.Id,
+            business.UserId,
             business.Name,
             business.Website,
             business.IsBranch,

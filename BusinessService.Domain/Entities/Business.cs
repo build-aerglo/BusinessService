@@ -5,6 +5,7 @@ namespace BusinessService.Domain.Entities;
 public class Business
 {
     public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
     public string Name { get; set; } = default!;
     public string? Website { get; set; }
     public bool IsBranch { get; set; }
