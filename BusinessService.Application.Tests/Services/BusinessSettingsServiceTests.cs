@@ -417,7 +417,7 @@ public class BusinessSettingsServiceTests
         // Arrange
         var businessId = Guid.NewGuid();
         var expectedUserId = Guid.NewGuid();
-        var business = new Business { Id = businessId, Name = "Test Business" };
+        var business = new Business { Id = businessId, Name = "Test Business", UserId = expectedUserId };
         var settings = new BusinessSettings
         {
             Id = Guid.NewGuid(),
@@ -429,8 +429,6 @@ public class BusinessSettingsServiceTests
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
         _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
             .ReturnsAsync(settings);
-        _businessRepoMock.Setup(r => r.GetBusinessUserIdByBusinessIdAsync(businessId))
-            .ReturnsAsync(expectedUserId);
 
         // Act
         var result = await _service.GetBusinessSettingsAsync(businessId);
@@ -438,7 +436,6 @@ public class BusinessSettingsServiceTests
         // Assert
         result.Should().NotBeNull();
         result.CurrentUserId.Should().Be(expectedUserId);
-        _businessRepoMock.Verify(r => r.GetBusinessUserIdByBusinessIdAsync(businessId), Times.Once);
     }
 
     [Test]
@@ -458,8 +455,6 @@ public class BusinessSettingsServiceTests
         _businessRepoMock.Setup(r => r.FindByIdAsync(businessId)).ReturnsAsync(business);
         _settingsRepoMock.Setup(r => r.FindBusinessSettingsByBusinessIdAsync(businessId))
             .ReturnsAsync(settings);
-        _businessRepoMock.Setup(r => r.GetBusinessUserIdByBusinessIdAsync(businessId))
-            .ReturnsAsync((Guid?)null);
 
         // Act
         var result = await _service.GetBusinessSettingsAsync(businessId);

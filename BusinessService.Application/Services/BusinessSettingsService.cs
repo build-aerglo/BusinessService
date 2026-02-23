@@ -40,7 +40,7 @@ public class BusinessSettingsService : IBusinessSettingsService
 
     public async Task<BusinessSettingsDto> GetBusinessSettingsAsync(Guid businessId)
     {
-        _ = await _businessRepository.FindByIdAsync(businessId)
+        var business = await _businessRepository.FindByIdAsync(businessId)
             ?? throw new BusinessNotFoundException($"Business {businessId} not found.");
 
         var settings = await _settingsRepository.FindBusinessSettingsByBusinessIdAsync(businessId);
@@ -57,9 +57,7 @@ public class BusinessSettingsService : IBusinessSettingsService
             }
         }
 
-        var currentUserId = await _businessRepository.GetBusinessUserIdByBusinessIdAsync(businessId);
-
-        return MapToBusinessSettingsDto(settings, currentUserId);
+        return MapToBusinessSettingsDto(settings, business.UserId);
     }
 
     public async Task<BusinessSettingsDto> UpdateBusinessSettingsAsync(
