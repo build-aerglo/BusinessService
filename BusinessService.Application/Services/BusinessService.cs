@@ -108,6 +108,7 @@ public class BusinessService : IBusinessService
         Name = request.Name,
         Website = request.Website,
         BusinessEmail = request.Email,
+        BusinessPhoneNumber = request.Phone,
         IsBranch = request.ParentBusinessId.HasValue,
         ParentBusinessId = request.ParentBusinessId,
         AvgRating = 0,
