@@ -61,6 +61,7 @@ public class BusinessServiceTests
             Name = "Alpha Coffee",
             Website = "https://alphacoffee.com",
             Email = "alpha@coffee.com",
+            Phone = "+1234567890",
             CategoryIds = new List<Guid> { Guid.NewGuid() }
         };
 
@@ -77,13 +78,16 @@ public class BusinessServiceTests
         result.Should().NotBeNull();
         result.Name.Should().Be("Alpha Coffee");
         result.BusinessEmail.Should().Be("alpha@coffee.com");
+        result.BusinessPhoneNumber.Should().Be("+1234567890");
         result.Categories.Should().ContainSingle(c => c.Name == "Coffee");
         result.QrCodeBase64.Should().Be("BASE64_QR_CODE_TEST_VALUE");
 
         // ✅ FIXED: BayesianAverage should be null for new business (no reviews yet)
         result.BayesianAverage.Should().BeNull();
 
-        _businessRepoMock.Verify(r => r.AddAsync(It.Is<Business>(b => b.BusinessEmail == "alpha@coffee.com")), Times.Once);
+        _businessRepoMock.Verify(r => r.AddAsync(It.Is<Business>(b =>
+            b.BusinessEmail == "alpha@coffee.com" &&
+            b.BusinessPhoneNumber == "+1234567890")), Times.Once);
         _qrCodeServiceMock.Verify(q => q.GenerateQrCodeBase64(It.IsAny<string>()), Times.Once);
         _searchProducerMock.Verify(s => s.PublishBusinessCreatedAsync(It.IsAny<BusinessDto>()), Times.Once);
     }

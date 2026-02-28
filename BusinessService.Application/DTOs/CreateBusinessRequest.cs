@@ -11,6 +11,7 @@ public class CreateBusinessRequest
 
     public string? Email { get; set; }
 
+    public string? Phone { get; set; }
     [Required, MinLength(1, ErrorMessage = "At least one category must be specified")]
     public required List<Guid> CategoryIds { get; set; }
 

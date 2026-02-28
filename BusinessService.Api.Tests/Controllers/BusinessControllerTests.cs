@@ -29,6 +29,7 @@ public class BusinessControllerTests
     {
         return new BusinessDto(
             id ?? Guid.NewGuid(),
+            null,
             name,
             "https://example.com",
             false,
