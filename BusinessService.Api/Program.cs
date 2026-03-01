@@ -10,31 +10,30 @@ using BusinessService.Infrastructure.PaymentInitiators.Paystack;
 using BusinessService.Infrastructure.Utility;
 using Dapper;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-// ---------------------------------------------------------------------
-// 1️⃣  Add services to the container
-// ---------------------------------------------------------------------
-
-// Enable controllers (for attribute routing)
+// ============================================================
+// CONTROLLERS & API DOCS
+// ============================================================
 builder.Services.AddControllers();
-
-// Add OpenAPI (Swagger)
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-// Register Dapper context (singleton since it only manages connection strings)
+// ============================================================
+// DAPPER CONTEXT
+// ============================================================
 builder.Services.AddSingleton<DapperContext>();
 
-// Register repositories (infrastructure layer)
+// ============================================================
+// REPOSITORIES
+// ============================================================
 builder.Services.AddScoped<IBusinessRepository, BusinessRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IBusinessSettingsRepository, BusinessSettingsRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
-
-// New repositories for business service features
 builder.Services.AddScoped<IBusinessVerificationRepository, BusinessVerificationRepository>();
 builder.Services.AddScoped<IIdVerificationRequestRepository, IdVerificationRequestRepository>();
 builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
@@ -50,29 +49,44 @@ builder.Services.AddScoped<ICompetitorComparisonSnapshotRepository, CompetitorCo
 builder.Services.AddScoped<IBusinessAutoResponseRepository, BusinessAutoResponseRepository>();
 builder.Services.AddScoped<ISubscriptionInvoiceRepository, SubscriptionInvoiceRepository>();
 
-// Register application services (application layer)
+// ============================================================
+// ANALYTICS READ REPOSITORY
+// Reads pre-calculated data written by the Azure Function.
+// Paired with IMemoryCache to avoid hitting the DB on every request.
+// ============================================================
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IAnalyticsReadRepository, AnalyticsReadRepository>();
+
+// ============================================================
+// APPLICATION SERVICES
+// ============================================================
 builder.Services.AddScoped<IBusinessService, BusinessService.Application.Services.BusinessService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBusinessSettingsService, BusinessSettingsService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<ITagService, TagService>();
-
-// New services for business service features
 builder.Services.AddScoped<IBusinessVerificationService, BusinessVerificationService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IBusinessUserService, BusinessUserService>();
 builder.Services.AddScoped<IAutoResponseService, AutoResponseService>();
 builder.Services.AddScoped<IBusinessClaimService, BusinessClaimService>();
 builder.Services.AddScoped<IExternalSourceService, ExternalSourceService>();
-builder.Services.AddScoped<IBusinessAnalyticsService, BusinessAnalyticsService>();
+builder.Services.AddScoped<IBusinessAnalyticsService, BusinessAnalyticsService>();   // Enterprise features
 builder.Services.AddScoped<IBusinessAutoResponseService, BusinessAutoResponseService>();
 builder.Services.AddScoped<ISubscriptionInvoiceService, SubscriptionInvoiceService>();
 
+// ============================================================
+// DAPPER TYPE HANDLERS
+// ============================================================
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Faq>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<Dictionary<string, string>>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<string>>());
 
-// Register SearchService HttpClient producer
+// ============================================================
+// HTTP CLIENTS
+// ============================================================
+
+// Search Service
 builder.Services.AddHttpClient<IBusinessSearchProducer, BusinessSearchHttpProducer>(client =>
 {
     var searchServiceUrl = builder.Configuration["Services:SearchServiceUrl"];
@@ -84,7 +98,7 @@ builder.Services.AddHttpClient<IBusinessSearchProducer, BusinessSearchHttpProduc
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// HTTP Client for UserService
+// User / Business Rep Service
 builder.Services.AddHttpClient<IBusinessRepServiceClient, BusinessRepServiceClient>(client =>
 {
     var userServiceUrl = builder.Configuration["Services:UserServiceUrl"];
@@ -101,18 +115,20 @@ builder.Services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
     var userServiceUrl = builder.Configuration["Services:UserServiceUrl"];
     if (string.IsNullOrWhiteSpace(userServiceUrl))
         throw new InvalidOperationException("Missing configuration: UserServiceUrl");
+
     client.BaseAddress = new Uri(userServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(10);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-    
 });
 
+// Paystack payment initiator
 builder.Services.AddHttpClient<IPaymentInitiator, PaystackPaymentInitiator>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+// Notification Service
 builder.Services.AddHttpClient<INotificationServiceClient, NotificationServiceClient>(client =>
 {
     var notificationServiceUrl = builder.Configuration["Services:NotificationServiceUrl"];
@@ -124,9 +140,15 @@ builder.Services.AddHttpClient<INotificationServiceClient, NotificationServiceCl
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+// ============================================================
+// BACKGROUND SERVICES
+// ============================================================
 builder.Services.AddHostedService<DndModeExpiryBackgroundService>();
 builder.Services.AddHostedService<BusinessUpdateListener>();
-// Optional: CORS (if calling from frontend)
+
+// ============================================================
+// CORS
+// ============================================================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -135,30 +157,20 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader());
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
+// ============================================================
+// BUILD & CONFIGURE PIPELINE
+// ============================================================
 var app = builder.Build();
 
-// ---------------------------------------------------------------------
-// 2️⃣  Configure the HTTP request pipeline
-// ---------------------------------------------------------------------
-
-// 1️⃣ Swagger setup
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "User Service API v1");
-    options.RoutePrefix = ""; // load Swagger at root
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Business Service API v1");
+    options.RoutePrefix = "";
 });
-
-// Optional: Global exception handler middleware (recommended)
-// app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
-
-// Enable attribute-routed controllers
 app.MapControllers();
 
 app.Run();
