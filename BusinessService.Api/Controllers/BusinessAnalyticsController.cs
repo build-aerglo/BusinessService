@@ -1,141 +1,135 @@
 using BusinessService.Application.DTOs.Analytics;
 using BusinessService.Application.Interfaces;
-using BusinessService.Domain.Entities;
 using BusinessService.Domain.Exceptions;
+using BusinessService.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BusinessService.Api.Controllers;
 
+/// <summary>
+/// Analytics endpoints for BusinessService.
+///
+/// ARCHITECTURE:
+///   - GET /dashboard and GET /latest read from business_analytics table
+///     populated by the Azure Function (AnalyticsProcessorFunction).
+///   - Enterprise branch/competitor endpoints still use IBusinessAnalyticsService directly.
+///   - POST /generate has been removed — the Azure Function runs every 5 minutes
+///     automatically. Use POST /api/trigger on the Function App to force a run.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class BusinessAnalyticsController : ControllerBase
 {
+    private readonly IAnalyticsReadRepository _analyticsReadRepo;
     private readonly IBusinessAnalyticsService _analyticsService;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<BusinessAnalyticsController> _logger;
 
     public BusinessAnalyticsController(
+        IAnalyticsReadRepository analyticsReadRepo,
         IBusinessAnalyticsService analyticsService,
+        IMemoryCache cache,
         ILogger<BusinessAnalyticsController> logger)
     {
-        _analyticsService = analyticsService;
-        _logger = logger;
+        _analyticsReadRepo = analyticsReadRepo;
+        _analyticsService  = analyticsService;
+        _cache             = cache;
+        _logger            = logger;
     }
 
+    // ============================================================
+    // STANDARD — reads pre-calculated data from Azure Function output
+    // ============================================================
+
     /// <summary>
-    /// Get analytics dashboard for a business
+    /// Get analytics dashboard for a business (cached 5 minutes).
+    /// Data is pre-calculated by the Azure Function every 5 minutes.
+    /// Returns 404 if the Function has not yet run for this business.
     /// </summary>
     [HttpGet("business/{businessId:guid}/dashboard")]
-    public async Task<ActionResult<AnalyticsDashboardDto>> GetDashboard(Guid businessId)
+    public async Task<IActionResult> GetDashboard(Guid businessId)
     {
+        var cacheKey = $"analytics_dashboard_{businessId}";
+
+        if (_cache.TryGetValue(cacheKey, out var cached) && cached != null)
+        {
+            _logger.LogDebug("Returning cached dashboard for business {BusinessId}.", businessId);
+            return Ok(cached);
+        }
+
         try
         {
-            var dashboard = await _analyticsService.GetDashboardAsync(businessId);
-            return Ok(dashboard);
-        }
-        catch (BusinessNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
+            var analytics = await _analyticsReadRepo.GetDashboardAsync(businessId);
+
+            if (analytics == null)
+            {
+                return NotFound(new
+                {
+                    message =
+                        "No analytics data found for this business. " +
+                        "The analytics function runs every 5 minutes. " +
+                        "If this business has no reviews yet, data will appear after the first review is approved.",
+                    businessId
+                });
+            }
+
+            _cache.Set(cacheKey, analytics, TimeSpan.FromMinutes(5));
+            return Ok(analytics);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting dashboard for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error fetching dashboard for business {BusinessId}.", businessId);
+            return StatusCode(500, new { message = "An error occurred while fetching analytics." });
         }
     }
 
     /// <summary>
-    /// Get latest analytics for a business
+    /// Get latest analytics for a business, always fetching fresh from DB (no cache).
     /// </summary>
     [HttpGet("business/{businessId:guid}/latest")]
-    public async Task<ActionResult<BusinessAnalyticsDto>> GetLatest(Guid businessId)
+    public async Task<IActionResult> GetLatest(Guid businessId)
     {
         try
         {
-            var analytics = await _analyticsService.GetLatestAnalyticsAsync(businessId);
+            var analytics = await _analyticsReadRepo.GetDashboardAsync(businessId);
+
             if (analytics == null)
-                return NotFound(new { message = "No analytics found" });
+                return NotFound(new { message = "No analytics found for this business.", businessId });
+
             return Ok(analytics);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting latest analytics for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error fetching latest analytics for business {BusinessId}.", businessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Get analytics history for a business
-    /// </summary>
-    [HttpGet("business/{businessId:guid}/history")]
-    public async Task<ActionResult<List<BusinessAnalyticsDto>>> GetHistory(
-        Guid businessId,
-        [FromQuery] int limit = 12)
-    {
-        try
-        {
-            var history = await _analyticsService.GetAnalyticsHistoryAsync(businessId, limit);
-            return Ok(history);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting analytics history for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
-        }
-    }
+    // ============================================================
+    // ENTERPRISE — branch comparison (unchanged)
+    // ============================================================
 
-    /// <summary>
-    /// Generate analytics for a specific period
-    /// </summary>
-    [HttpPost("business/{businessId:guid}/generate")]
-    public async Task<ActionResult<BusinessAnalyticsDto>> GenerateAnalytics(
-        Guid businessId,
-        [FromQuery] AnalyticsPeriodType periodType = AnalyticsPeriodType.Monthly)
-    {
-        try
-        {
-            var analytics = await _analyticsService.GenerateAnalyticsAsync(businessId, periodType);
-            return Ok(analytics);
-        }
-        catch (BusinessNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error generating analytics for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
-        }
-    }
-
-    /// <summary>
-    /// Get branch comparison (Enterprise only)
-    /// </summary>
     [HttpGet("business/{parentBusinessId:guid}/branch-comparison")]
-    public async Task<ActionResult<BranchComparisonDto>> GetBranchComparison(Guid parentBusinessId)
+    public async Task<IActionResult> GetBranchComparison(Guid parentBusinessId)
     {
         try
         {
             var comparison = await _analyticsService.GetBranchComparisonAsync(parentBusinessId);
-            if (comparison == null)
-                return NotFound(new { message = "No branch comparison found" });
+            if (comparison == null) return NotFound(new { message = "No branch comparison found." });
             return Ok(comparison);
         }
         catch (FeatureNotAvailableException ex)
-        {
-            return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan });
-        }
+        { return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan }); }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting branch comparison for business {BusinessId}", parentBusinessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error getting branch comparison for {BusinessId}.", parentBusinessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Generate branch comparison (Enterprise only)
-    /// </summary>
     [HttpPost("business/{parentBusinessId:guid}/branch-comparison/generate")]
-    public async Task<ActionResult<BranchComparisonDto>> GenerateBranchComparison(Guid parentBusinessId)
+    public async Task<IActionResult> GenerateBranchComparison(Guid parentBusinessId)
     {
         try
         {
@@ -143,25 +137,22 @@ public class BusinessAnalyticsController : ControllerBase
             return Ok(comparison);
         }
         catch (FeatureNotAvailableException ex)
-        {
-            return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan });
-        }
+        { return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan }); }
         catch (BusinessNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        { return NotFound(new { message = ex.Message }); }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating branch comparison for business {BusinessId}", parentBusinessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error generating branch comparison for {BusinessId}.", parentBusinessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Get competitor comparison (Enterprise only)
-    /// </summary>
+    // ============================================================
+    // ENTERPRISE — competitor comparison (unchanged)
+    // ============================================================
+
     [HttpGet("business/{businessId:guid}/competitor-comparison")]
-    public async Task<ActionResult<CompetitorComparisonDto>> GetCompetitorComparison(Guid businessId)
+    public async Task<IActionResult> GetCompetitorComparison(Guid businessId)
     {
         try
         {
@@ -171,19 +162,14 @@ public class BusinessAnalyticsController : ControllerBase
             return Ok(comparison);
         }
         catch (FeatureNotAvailableException ex)
-        {
-            return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan });
-        }
+        { return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan }); }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting competitor comparison for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error getting competitor comparison for {BusinessId}.", businessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Add a competitor for comparison (Enterprise only)
-    /// </summary>
     [HttpPost("competitors")]
     public async Task<IActionResult> AddCompetitor(
         [FromBody] AddCompetitorRequest request,
@@ -192,58 +178,42 @@ public class BusinessAnalyticsController : ControllerBase
         try
         {
             await _analyticsService.AddCompetitorAsync(request, addedByUserId);
-            return Ok(new { message = "Competitor added successfully" });
+            return Ok(new { message = "Competitor added successfully." });
         }
         catch (FeatureNotAvailableException ex)
-        {
-            return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan });
-        }
+        { return StatusCode(403, new { message = ex.Message, requiredPlan = ex.RequiredPlan }); }
         catch (BusinessNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        { return NotFound(new { message = ex.Message }); }
         catch (InvalidSubscriptionOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        { return Conflict(new { message = ex.Message }); }
         catch (SubscriptionLimitExceededException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        { return BadRequest(new { message = ex.Message }); }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding competitor for business {BusinessId}", request.BusinessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error adding competitor for {BusinessId}.", request.BusinessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Remove a competitor from comparison
-    /// </summary>
     [HttpDelete("competitors")]
     public async Task<IActionResult> RemoveCompetitor([FromBody] RemoveCompetitorRequest request)
     {
         try
         {
             await _analyticsService.RemoveCompetitorAsync(request);
-            return Ok(new { message = "Competitor removed successfully" });
+            return Ok(new { message = "Competitor removed successfully." });
         }
         catch (BusinessNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        { return NotFound(new { message = ex.Message }); }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing competitor for business {BusinessId}", request.BusinessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error removing competitor for {BusinessId}.", request.BusinessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Check branch comparison availability
-    /// </summary>
     [HttpGet("business/{businessId:guid}/can-access-branch-comparison")]
-    public async Task<ActionResult<object>> CanAccessBranchComparison(Guid businessId)
+    public async Task<IActionResult> CanAccessBranchComparison(Guid businessId)
     {
         try
         {
@@ -252,16 +222,13 @@ public class BusinessAnalyticsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking branch comparison access for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error checking branch comparison access for {BusinessId}.", businessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 
-    /// <summary>
-    /// Check competitor comparison availability
-    /// </summary>
     [HttpGet("business/{businessId:guid}/can-access-competitor-comparison")]
-    public async Task<ActionResult<object>> CanAccessCompetitorComparison(Guid businessId)
+    public async Task<IActionResult> CanAccessCompetitorComparison(Guid businessId)
     {
         try
         {
@@ -270,8 +237,8 @@ public class BusinessAnalyticsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking competitor comparison access for business {BusinessId}", businessId);
-            return StatusCode(500, new { message = "An error occurred" });
+            _logger.LogError(ex, "Error checking competitor comparison access for {BusinessId}.", businessId);
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 }
