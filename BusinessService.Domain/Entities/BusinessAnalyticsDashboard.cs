@@ -56,8 +56,13 @@ public class ResponseMetrics
 }
 
 /// <summary>
-/// Written by SentimentAnalysisService in the AnalyticsFunction.
-/// JSONB keys: positivePct, neutralPct, negativePct, keywords
+/// Written by SentimentAnalysisService + OpinionMiningService in the AnalyticsFunction.
+/// JSONB keys: positivePct, neutralPct, negativePct, keywords, aspects
+///
+/// FIX: Added Aspects property and AspectSentimentData class.
+/// Previously this class was missing both, causing the JSON deserializer to
+/// silently drop the "aspects" array that the AnalyticsFunction was writing to the DB.
+/// The data was always in the JSONB column — it just never reached the API response.
 /// </summary>
 public class SentimentMetrics
 {
@@ -65,6 +70,14 @@ public class SentimentMetrics
     public decimal NeutralPct { get; set; }
     public decimal NegativePct { get; set; }
     public KeywordData? Keywords { get; set; }
+
+    /// <summary>
+    /// Aspect-level opinion mining results aggregated across all reviews.
+    /// e.g. "staff" → positiveCount: 3, negativeCount: 2, positiveOpinions: ["attentive"],
+    ///                 negativeOpinions: ["rude"], sentimentScore: 0.6
+    /// Populated by OpinionMiningService in the AnalyticsFunction.
+    /// </summary>
+    public List<AspectSentimentData>? Aspects { get; set; }
 }
 
 public class KeywordData
@@ -77,6 +90,27 @@ public class KeywordItem
 {
     public string Text { get; set; } = string.Empty;
     public int Count { get; set; }
+}
+
+/// <summary>
+/// Aggregated aspect sentiment across all reviews for a business.
+/// Mirrors AnalyticsService.Domain.Entities.AspectSentimentData exactly —
+/// if you add fields there, add them here too.
+/// </summary>
+public class AspectSentimentData
+{
+    public string Aspect { get; set; } = string.Empty;
+    public int PositiveCount { get; set; }
+    public int NegativeCount { get; set; }
+
+    /// <summary>Score from 0–1. 1 = fully positive, 0 = fully negative.</summary>
+    public decimal SentimentScore { get; set; }
+
+    /// <summary>Top opinion words associated with positive mentions of this aspect.</summary>
+    public List<string>? PositiveOpinions { get; set; }
+
+    /// <summary>Top opinion words associated with negative mentions of this aspect.</summary>
+    public List<string>? NegativeOpinions { get; set; }
 }
 
 /// <summary>
