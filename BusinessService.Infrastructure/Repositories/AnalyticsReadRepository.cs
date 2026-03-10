@@ -34,13 +34,13 @@ public class AnalyticsReadRepository : IAnalyticsReadRepository
 
     public async Task<BusinessAnalyticsDashboard?> GetDashboardAsync(Guid businessId)
     {
-        // Cast metrics JSONB → text so Dapper treats it as a plain string column
         const string sql = """
             SELECT
                 id,
                 business_id,
                 total_reviews,
                 average_rating,
+                bayesian_average_rating,
                 metrics::text      AS metrics_json,
                 last_calculated_at,
                 created_at,
@@ -70,11 +70,9 @@ public class AnalyticsReadRepository : IAnalyticsReadRepository
         }
     }
 
-    // ============================================================
-    // MAPPING
-    // ============================================================
+    // ── Mapping ──────────────────────────────────────────
 
-    private  BusinessAnalyticsDashboard Map(AnalyticsRawRow row)
+    private BusinessAnalyticsDashboard Map(AnalyticsRawRow row)
     {
         AnalyticsMetrics? metrics = null;
 
@@ -84,31 +82,30 @@ public class AnalyticsReadRepository : IAnalyticsReadRepository
             {
                 metrics = JsonSerializer.Deserialize<AnalyticsMetrics>(row.MetricsJson, JsonOptions);
             }
-           catch (Exception ex)
-           {
-               _logger.LogError(ex, "Failed to deserialize metrics JSON: {Json}", row.MetricsJson);
-               metrics = null;
-           }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to deserialize metrics JSON: {Json}", row.MetricsJson);
+                metrics = null;
+            }
         }
 
         return new BusinessAnalyticsDashboard
         {
-            Id               = row.Id,
-            BusinessId       = row.BusinessId,
-            TotalReviews     = row.TotalReviews,
-            AverageRating    = row.AverageRating,
-            Metrics          = metrics,
-            LastCalculatedAt = row.LastCalculatedAt,
-            CreatedAt        = row.CreatedAt,
-            UpdatedAt        = row.UpdatedAt
+            Id                    = row.Id,
+            BusinessId            = row.BusinessId,
+            TotalReviews          = row.TotalReviews,
+            AverageRating         = row.AverageRating,
+            BayesianAverageRating = row.BayesianAverageRating,
+            Metrics               = metrics,
+            LastCalculatedAt      = row.LastCalculatedAt,
+            CreatedAt             = row.CreatedAt,
+            UpdatedAt             = row.UpdatedAt
         };
     }
 
-    // ============================================================
-    // PRIVATE RAW ROW
-    // Dapper maps snake_case column aliases to these PascalCase properties
+    // ── Private raw row ───────────────────────────────────
+    // Dapper maps snake_case column aliases to PascalCase properties
     // because DefaultTypeMap.MatchNamesWithUnderscores = true is set in Program.cs
-    // ============================================================
 
     private sealed class AnalyticsRawRow
     {
@@ -116,6 +113,7 @@ public class AnalyticsReadRepository : IAnalyticsReadRepository
         public Guid BusinessId { get; set; }
         public int TotalReviews { get; set; }
         public decimal AverageRating { get; set; }
+        public decimal BayesianAverageRating { get; set; }
         public string MetricsJson { get; set; } = "{}";
         public DateTime LastCalculatedAt { get; set; }
         public DateTime CreatedAt { get; set; }

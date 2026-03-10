@@ -10,7 +10,16 @@ public class BusinessAnalyticsDashboard
     public Guid Id { get; set; }
     public Guid BusinessId { get; set; }
     public int TotalReviews { get; set; }
+    /// <summary>Plain arithmetic average, rounded to 1dp.</summary>
     public decimal AverageRating { get; set; }
+
+    /// <summary>
+    /// Bayesian average rating, rounded to 1dp.
+    /// Accounts for review volume — low-count businesses are pulled toward
+    /// the category/platform mean. Use this for any ranking or public display.
+    /// Falls back to AverageRating if business_rating has no row yet.
+    /// </summary>
+    public decimal BayesianAverageRating { get; set; }
 
     /// <summary>
     /// Deserialized from the JSONB metrics column written by the Azure Function.
