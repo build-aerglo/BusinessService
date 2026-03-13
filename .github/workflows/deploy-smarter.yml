@@ -54,6 +54,10 @@ jobs:
             exit 1
           fi
 
+       # ---------- Put app offline ----------
+      - name: Take app offline
+        run: echo "App offline" > publish/app_offline.htm
+
       # ---------- Deploy ----------
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -65,3 +69,16 @@ jobs:
           port: 21
           local-dir: publish/
           server-dir: /
+          dangerous-clean-slate: false
+
+      # # ---------- Deploy ----------
+      # - name: Deploy via FTP
+      #   uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      #   with:
+      #     server: ${{ secrets.SMARTER_FTP_SERVER }}
+      #     username: ${{ secrets.SMARTER_FTP_USERNAME }}
+      #     password: ${{ secrets.SMARTER_FTP_PASSWORD }}
+      #     protocol: ftp
+      #     port: 21
+      #     local-dir: publish/
+      #     server-dir: /
