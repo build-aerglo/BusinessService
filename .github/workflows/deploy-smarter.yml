@@ -53,13 +53,14 @@ jobs:
             echo "Publish folder is empty. Aborting deploy."
             exit 1
           fi
-    
-      # ---------- Create offline file ----------
+
+      # =========================================================
+      # PUT SITE IN MAINTENANCE MODE
+      # =========================================================
       - name: Create app_offline.htm
-        run: echo "Application temporarily offline for deployment" > app_offline.htm
-    
-      # ---------- Upload offline file FIRST ----------
-      - name: Take application offline
+        run: echo "Site updating. Please wait..." > app_offline.htm
+
+      - name: Upload app_offline.htm
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.SMARTER_FTP_SERVER }}
@@ -71,8 +72,10 @@ jobs:
           server-dir: /
           include: |
             app_offline.htm
-    
-      # ---------- Deploy application ----------
+            
+      # =========================================================
+      # DEPLOY APPLICATION FILES
+      # =========================================================
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -83,12 +86,14 @@ jobs:
           port: 21
           local-dir: publish/
           server-dir: /
-          exclude: |
-            **/.git*
-            **/.git*/**
-    
-      # ---------- Remove offline file ----------
+
+      # =========================================================
+      # REMOVE MAINTENANCE MODE
+      # =========================================================
       - name: Remove app_offline.htm
+        run: rm app_offline.htm
+
+      - name: Delete remote app_offline.htm
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.SMARTER_FTP_SERVER }}
@@ -100,6 +105,3 @@ jobs:
           server-dir: /
           exclude: |
             *
-          include: |
-            !app_offline.htm
-    
