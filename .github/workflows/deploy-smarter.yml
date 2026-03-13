@@ -17,7 +17,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # ---------- SAFETY CHECK 1 ----------
       - name: Verify project file exists
         run: |
           if [ ! -f "$PROJECT_PATH" ]; then
@@ -25,29 +24,23 @@ jobs:
             exit 1
           fi
 
-      # ---------- Setup .NET ----------
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      # ---------- Restore ----------
       - name: Restore dependencies
         run: dotnet restore $PROJECT_PATH
 
-      # ---------- Build ----------
       - name: Build
         run: dotnet build $PROJECT_PATH --configuration Release --no-restore
 
-      # ---------- Tests ----------
       - name: Run tests
         run: dotnet test $PROJECT_PATH --configuration Release --no-build --verbosity normal
 
-      # ---------- Publish ----------
       - name: Publish
         run: dotnet publish $PROJECT_PATH -c Release -o publish
 
-      # ---------- SAFETY CHECK 2 ----------
       - name: Validate publish output
         run: |
           if [ ! "$(ls -A publish)" ]; then
@@ -56,7 +49,7 @@ jobs:
           fi
 
       # =========================================================
-      # PUT SITE IN MAINTENANCE MODE (raw FTP, no sync state)
+      # PUT SITE IN MAINTENANCE MODE
       # =========================================================
       - name: Upload app_offline.htm via curl
         run: |
@@ -80,10 +73,22 @@ jobs:
           server-dir: ${{ env.FTP_SERVER_DIR }}
 
       # =========================================================
-      # REMOVE MAINTENANCE MODE (raw FTP, no sync state)
+      # REMOVE MAINTENANCE MODE
       # =========================================================
-      - name: Delete app_offline.htm via curl
-        run: |
-          curl -Q "DELE ${{ env.FTP_SERVER_DIR }}app_offline.htm" \
-            ftp://${{ secrets.SMARTER_FTP_SERVER }} \
-            --user "${{ secrets.SMARTER_FTP_USERNAME }}:${{ secrets.SMARTER_FTP_PASSWORD }}"
+      - name: Remove local app_offline.htm
+        run: rm app_offline.htm
+
+      - name: Delete remote app_offline.htm
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.SMARTER_FTP_SERVER }}
+          username: ${{ secrets.SMARTER_FTP_USERNAME }}
+          password: ${{ secrets.SMARTER_FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./publish/
+          server-dir: ${{ env.FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **
+            !app_offline.htm
