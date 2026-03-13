@@ -8,14 +8,14 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     env:
       PROJECT_PATH: ./BusinessService.Api/BusinessService.Api.csproj
-  
+      
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-    
+
       # ---------- SAFETY CHECK 1 ----------
       - name: Verify project file exists
         run: |
@@ -23,30 +23,30 @@ jobs:
             echo "Project file not found. Aborting deploy."
             exit 1
           fi
-    
+
       # ---------- Setup .NET ----------
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-    
+
       # ---------- Restore ----------
       - name: Restore dependencies
         run: dotnet restore $PROJECT_PATH
-    
+
       # ---------- Build ----------
       - name: Build
         run: dotnet build $PROJECT_PATH --configuration Release --no-restore
-    
+
       # ---------- Tests ----------
       - name: Run tests
         run: dotnet test --no-build --verbosity normal
-    
+
       # ---------- Publish ----------
       - name: Publish
         run: dotnet publish $PROJECT_PATH -c Release -o publish
-    
-      # ---------- Validate publish ----------
+
+      # ---------- SAFETY CHECK 2 ----------
       - name: Validate publish output
         run: |
           if [ ! "$(ls -A publish)" ]; then
@@ -72,7 +72,7 @@ jobs:
           server-dir: /
           include: |
             app_offline.htm
-            
+
       # =========================================================
       # DEPLOY APPLICATION FILES
       # =========================================================
