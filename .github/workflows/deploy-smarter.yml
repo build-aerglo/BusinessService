@@ -8,10 +8,11 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     env:
       PROJECT_PATH: ./BusinessService.Api/BusinessService.Api.csproj
-      
+      FTP_SERVER_DIR: /root/home/mdeeokoye-002/www/site2/wwwroot/   # ← SET THIS to your actual remote path
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -40,7 +41,7 @@ jobs:
 
       # ---------- Tests ----------
       - name: Run tests
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test $PROJECT_PATH --configuration Release --no-build --verbosity normal
 
       # ---------- Publish ----------
       - name: Publish
@@ -58,7 +59,7 @@ jobs:
       # PUT SITE IN MAINTENANCE MODE
       # =========================================================
       - name: Create app_offline.htm
-        run: echo "Site updating. Please wait..." > app_offline.htm
+        run: echo "Site updating. Please wait..." > ./publish/app_offline.htm
 
       - name: Upload app_offline.htm
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -68,14 +69,17 @@ jobs:
           password: ${{ secrets.SMARTER_FTP_PASSWORD }}
           protocol: ftp
           port: 21
-          local-dir: ./
-          server-dir: /
+          local-dir: ./publish/
+          server-dir: ${{ env.FTP_SERVER_DIR }}
           include: |
             app_offline.htm
 
       # =========================================================
       # DEPLOY APPLICATION FILES
       # =========================================================
+      - name: Remove app_offline.htm from publish folder before full deploy
+        run: rm ./publish/app_offline.htm
+
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -84,14 +88,14 @@ jobs:
           password: ${{ secrets.SMARTER_FTP_PASSWORD }}
           protocol: ftp
           port: 21
-          local-dir: publish/
-          server-dir: /
+          local-dir: ./publish/
+          server-dir: ${{ env.FTP_SERVER_DIR }}
 
       # =========================================================
       # REMOVE MAINTENANCE MODE
       # =========================================================
-      - name: Remove app_offline.htm
-        run: rm app_offline.htm
+      - name: Create empty app_offline.htm for deletion
+        run: mkdir -p ./offline-remove && touch ./offline-remove/app_offline.htm
 
       - name: Delete remote app_offline.htm
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -101,7 +105,8 @@ jobs:
           password: ${{ secrets.SMARTER_FTP_PASSWORD }}
           protocol: ftp
           port: 21
-          local-dir: ./
-          server-dir: /
+          local-dir: ./offline-remove/
+          server-dir: ${{ env.FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
           exclude: |
-            *
+            app_offline.htm
